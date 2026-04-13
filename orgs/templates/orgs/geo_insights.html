@@ -174,23 +174,86 @@
   function showWard() {
     clearLayer();
     if (!wardGeoJSON) { setLegend('<div class="text-danger small">Ward boundaries not loaded.</div>'); return; }
+
     const counts = {};
     orgs.forEach(o => { if (o.ward) counts[o.ward] = (counts[o.ward] || 0) + 1; });
     const max = Math.max(...Object.values(counts), 1);
+
     function wardColor(n) {
       const t = n / max;
       return t > 0.8 ? "#0a5c47" : t > 0.6 ? "#0F7F63" : t > 0.4 ? "#52b69a" : t > 0.2 ? "#99d9c8" : "#d1ede7";
     }
+
+    function normalStyle(f) {
+      return {
+        fillColor: wardColor(counts[f.properties.NAME] || 0),
+        weight: 1.5,
+        color: "#fff",
+        fillOpacity: 0.75
+      };
+    }
+
+    const selectedStyle = {
+      weight: 3.5,
+      color: "#0F7F63",
+      fillOpacity: 0.9,
+      dashArray: ""
+    };
+
+    let selectedLayer = null;
+
     activeLayer = L.geoJSON(wardGeoJSON, {
-      style: f => ({ fillColor: wardColor(counts[f.properties.NAME] || 0), weight: 1.5, color: "#fff", fillOpacity: 0.75 }),
+      style: normalStyle,
       onEachFeature: (f, l) => {
-        const name = f.properties.NAME, n = counts[name] || 0;
-        l.bindTooltip(`<strong>${name}</strong>: ${n} org${n !== 1 ? "s" : ""}`, { sticky: true });
+        const name = f.properties.NAME;
+        const n = counts[name] || 0;
+
+        l.on("click", function () {
+          // Reset previously selected ward
+          if (selectedLayer && selectedLayer !== l) {
+            activeLayer.resetStyle(selectedLayer);
+          }
+          // If clicking the same ward again, deselect it
+          if (selectedLayer === l) {
+            activeLayer.resetStyle(l);
+            selectedLayer = null;
+            return;
+          }
+          // Highlight clicked ward along its boundary
+          l.setStyle({
+            ...selectedStyle,
+            fillColor: wardColor(n)
+          });
+          l.bringToFront();
+          selectedLayer = l;
+        });
+
+        // Hover: subtle brightness boost
+        l.on("mouseover", function () {
+          if (selectedLayer !== l) {
+            l.setStyle({ weight: 2.5, color: "#0F7F63", fillOpacity: 0.85 });
+            l.bringToFront();
+          }
+        });
+        l.on("mouseout", function () {
+          if (selectedLayer !== l) {
+            activeLayer.resetStyle(l);
+          }
+        });
       }
     }).addTo(map);
+
+    // Clicking the map background deselects any selected ward
+    map.on("click", function (e) {
+      if (selectedLayer && !e.originalEvent._fromWard) {
+        activeLayer.resetStyle(selectedLayer);
+        selectedLayer = null;
+      }
+    });
+
     const rows = Object.entries(counts).sort((a, b) => b[1] - a[1])
       .map(([w, n]) => `<div class="legend-item"><div class="legend-swatch rect" style="background:${wardColor(n)};"></div><span>${w}: <strong>${n}</strong></span></div>`).join("");
-    setLegend(`<div class="text-muted mb-2" style="font-size:0.78rem;">Organizations per ward.</div>${rows || "<span class='text-muted small'>No ward data.</span>"}`);
+    setLegend(`<div class="text-muted mb-2" style="font-size:0.78rem;">Click a ward to highlight it.</div>${rows || "<span class='text-muted small'>No ward data.</span>"}`);
   }
 
   function showByField(field, label) {
