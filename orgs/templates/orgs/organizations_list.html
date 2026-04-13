@@ -269,10 +269,6 @@
                 <td>{{ org.primary_contact_person|default:"" }}</td>
                 <td>{{ org.contact_person_role|default:"" }}</td>
               </tr>
-            {% empty %}
-              <tr>
-                <td colspan="6" class="text-center text-muted py-4">No organizations found.</td>
-              </tr>
             {% endfor %}
           </tbody>
 
