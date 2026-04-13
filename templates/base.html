@@ -76,6 +76,10 @@
             <a class="nav-link" href="{% url 'organizations_map' %}">Map</a>
           </li>
 
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'geo_insights' %}">Geo Insights</a>
+          </li>
+
           {% if request.user.is_authenticated and request.user.is_superuser %}
             <li class="nav-item">
               <a class="nav-link" href="/admin/">Admin</a>

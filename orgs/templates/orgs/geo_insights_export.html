@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Geo Insights — Anti-racism-DC</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f8f9fa; padding: 20px; font-family: system-ui, sans-serif; }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    #geo-map { height: 70vh; min-height: 500px; border-radius: 0.5rem; width: 100%; }
+    .view-btn.active { background-color: #0F7F63; border-color: #0F7F63; color: #fff; }
+    .view-btn { font-size: 0.85rem; }
+    #geo-legend { background:#fff; border:1px solid #dee2e6; border-radius:0.5rem; padding:12px 16px; font-size:0.82rem; max-height:260px; overflow-y:auto; }
+    #geo-legend h6 { font-size:0.8rem; text-transform:uppercase; letter-spacing:0.04em; color:#6c757d; margin-bottom:8px; }
+    .legend-item { display:flex; align-items:center; gap:8px; margin-bottom:5px; line-height:1.3; }
+    .legend-swatch { width:14px; height:14px; border-radius:50%; flex-shrink:0; border:1px solid rgba(0,0,0,0.15); }
+    .legend-swatch.rect { border-radius:3px; }
+    .heat-legend { display:flex; align-items:center; gap:6px; margin-top:4px; }
+    .heat-bar { height:12px; flex:1; border-radius:4px; background:linear-gradient(to right,#0000ff55,#00ff0099,#ffff0099,#ff000099); }
+  </style>
+</head>
+<body>
+  <div class="mb-3">
+    <h1>Geo Insights — Anti-racism-DC</h1>
+    <div class="text-muted small">Exported snapshot · {{ export_date }}</div>
+  </div>
+
+  <div class="mb-3 d-flex flex-wrap gap-2">
+    <button class="btn btn-outline-secondary view-btn active" data-view="density">Density</button>
+    <button class="btn btn-outline-secondary view-btn" data-view="ward">By Ward</button>
+    <button class="btn btn-outline-secondary view-btn" data-view="type">By Org Type</button>
+    <button class="btn btn-outline-secondary view-btn" data-view="focus">By Anti-Racism Focus</button>
+    <button class="btn btn-outline-secondary view-btn" data-view="engagement">By Engagement Type</button>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-9">
+      <div class="card shadow-sm">
+        <div class="card-body p-2">
+          <div id="geo-map"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3">
+      <div id="geo-legend">
+        <h6>Legend</h6>
+        <div id="legend-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+  (function () {
+    const orgs = {{ org_data_json|safe }};
+    const wardGeoJSON = {{ ward_geojson_json|safe }};
+
+    const map = L.map("geo-map").setView([38.9072, -77.0369], 12);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    }).addTo(map);
+
+    const PALETTE = [
+      "#0F7F63","#E63946","#F4A261","#457B9D","#A8DADC",
+      "#6A4C93","#F77F00","#2DC653","#C9184A","#4361EE",
+      "#7209B7","#3A86FF","#FB5607","#8338EC","#06D6A0"
+    ];
+
+    function colorFor(map, key) {
+      if (!map[key]) { map[key] = PALETTE[Object.keys(map).length % PALETTE.length]; }
+      return map[key];
+    }
+
+    function buildPopup(o) {
+      const web = o.website ? `<a href="${o.website}" target="_blank" rel="noopener noreferrer">Visit website</a>` : "—";
+      return `<div style="min-width:220px;font-size:0.85rem;">
+        <div style="font-weight:700;margin-bottom:4px;">${o.organization_name || "—"}</div>
+        <div><strong>Type:</strong> ${o.organization_type || "—"}</div>
+        <div><strong>Address:</strong> ${o.address || "—"}</div>
+        <div><strong>Anti-Racism Focus:</strong> ${o.anti_racism_focus || "—"}</div>
+        <div><strong>Website:</strong> ${web}</div>
+      </div>`;
+    }
+
+    let activeLayer = null;
+    function clearLayer() { if (activeLayer) { map.removeLayer(activeLayer); activeLayer = null; } }
+
+    const legendContent = document.getElementById("legend-content");
+    function setLegend(html) { legendContent.innerHTML = html; }
+
+    function showDensity() {
+      clearLayer();
+      const points = orgs.filter(o => o.latitude && o.longitude).map(o => [o.latitude, o.longitude, 1]);
+      activeLayer = L.heatLayer(points, { radius:30, blur:20, maxZoom:15, gradient:{"0.2":"#0000ff","0.5":"#00ff00","0.7":"#ffff00","1.0":"#ff0000"} }).addTo(map);
+      setLegend(`<div class="text-muted mb-2">Geographic concentration of all organizations.</div><div class="heat-legend"><span style="font-size:0.75rem;">Low</span><div class="heat-bar"></div><span style="font-size:0.75rem;">High</span></div>`);
+    }
+
+    function showWard() {
+      clearLayer();
+      const counts = {};
+      orgs.forEach(o => { if (o.ward) counts[o.ward] = (counts[o.ward] || 0) + 1; });
+      const max = Math.max(...Object.values(counts), 1);
+      function wardColor(n) {
+        const t = n / max;
+        if (t > 0.8) return "#0a5c47";
+        if (t > 0.6) return "#0F7F63";
+        if (t > 0.4) return "#52b69a";
+        if (t > 0.2) return "#99d9c8";
+        return "#d1ede7";
+      }
+      activeLayer = L.geoJSON(wardGeoJSON, {
+        style: f => ({ fillColor: wardColor(counts[f.properties.NAME] || 0), weight:1.5, color:"#fff", fillOpacity:0.75 }),
+        onEachFeature: (f, l) => {
+          const name = f.properties.NAME, count = counts[name] || 0;
+          l.bindPopup(`<strong>${name}</strong><br>${count} organization${count !== 1 ? "s" : ""}`);
+          l.on("mouseover", function () { this.openPopup(); });
+          l.on("mouseout", function () { this.closePopup(); });
+        }
+      }).addTo(map);
+      const rows = Object.entries(counts).sort((a,b) => b[1]-a[1]).map(([w,n]) =>
+        `<div class="legend-item"><div class="legend-swatch rect" style="background:${wardColor(n)};"></div><span>${w}: <strong>${n}</strong></span></div>`).join("");
+      setLegend(`<div class="text-muted mb-2">Organizations per ward.</div>${rows}`);
+    }
+
+    function showByField(field, label) {
+      clearLayer();
+      const colorMap = {};
+      activeLayer = L.layerGroup();
+      orgs.filter(o => o.latitude && o.longitude).forEach(o => {
+        const val = o[field] || "Unknown";
+        L.circleMarker([o.latitude, o.longitude], { radius:7, fillColor:colorFor(colorMap, val), color:"#fff", weight:1.2, fillOpacity:0.85 }).bindPopup(buildPopup(o)).addTo(activeLayer);
+      });
+      activeLayer.addTo(map);
+      const rows = Object.entries(colorMap).map(([v,c]) =>
+        `<div class="legend-item"><div class="legend-swatch" style="background:${c};"></div><span>${v}</span></div>`).join("");
+      setLegend(`<div class="text-muted mb-2">Organizations by ${label}.</div>${rows}`);
+    }
+
+    const views = {
+      density:    showDensity,
+      ward:       showWard,
+      type:       () => showByField("organization_type", "organization type"),
+      focus:      () => showByField("anti_racism_focus", "anti-racism focus"),
+      engagement: () => showByField("primary_anti_racist_engagement_type", "engagement type"),
+    };
+
+    document.querySelectorAll(".view-btn").forEach(btn => {
+      btn.addEventListener("click", function () {
+        document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
+        this.classList.add("active");
+        views[this.dataset.view]();
+      });
+    });
+
+    showDensity();
+  })();
+  </script>
+</body>
+</html>

@@ -1,5 +1,12 @@
+import json
+import os
+from datetime import date
+
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
+from django.template.loader import render_to_string
 
 from .models import Organization
 
@@ -68,3 +75,53 @@ def organizations_map(request):
         )
 
     return render(request, "orgs/organizations_map.html", {"organizations": organizations})
+
+
+def _build_org_geo_data():
+    """Return a list of org dicts suitable for the geo insights map."""
+    qs = Organization.objects.exclude(latitude=None).exclude(longitude=None)
+    data = []
+    for o in qs:
+        data.append({
+            "organization_name": o.organization_name or "",
+            "organization_type": o.organization_type or "",
+            "address": o.address or "",
+            "ward": o.ward or "",
+            "website": o.website or "",
+            "anti_racism_focus": o.anti_racism_focus or "",
+            "primary_anti_racist_engagement_type": o.primary_anti_racist_engagement_type or "",
+            "latitude": o.latitude,
+            "longitude": o.longitude,
+        })
+    return data
+
+
+def _load_ward_geojson():
+    path = os.path.join(settings.BASE_DIR, "orgs", "static", "geo", "dc_wards.geojson")
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+@login_required
+def geo_insights(request):
+    org_data = _build_org_geo_data()
+    ward_geojson = _load_ward_geojson()
+    context = {
+        "org_data_json": json.dumps(org_data),
+        "ward_geojson_json": json.dumps(ward_geojson),
+    }
+    return render(request, "orgs/geo_insights.html", context)
+
+
+@login_required
+def geo_insights_export(request):
+    org_data = _build_org_geo_data()
+    ward_geojson = _load_ward_geojson()
+    html = render_to_string("orgs/geo_insights_export.html", {
+        "org_data_json": json.dumps(org_data),
+        "ward_geojson_json": json.dumps(ward_geojson),
+        "export_date": date.today().strftime("%B %d, %Y"),
+    }, request=request)
+    response = HttpResponse(html, content_type="text/html")
+    response["Content-Disposition"] = 'attachment; filename="geo_insights.html"'
+    return response

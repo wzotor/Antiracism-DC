@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Geo Insights — Anti-racism-DC{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  #geo-map {
+    height: calc(100vh - 220px);
+    min-height: 500px;
+    border-radius: 0.5rem;
+    width: 100%;
+  }
+
+  .view-btn.active {
+    background-color: #0F7F63;
+    border-color: #0F7F63;
+    color: #fff;
+  }
+
+  .view-btn {
+    font-size: 0.85rem;
+  }
+
+  #geo-legend {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  #geo-legend h6 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6c757d;
+    margin-bottom: 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+    line-height: 1.3;
+  }
+
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+
+  .legend-swatch.rect {
+    border-radius: 3px;
+  }
+
+  .heat-legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .heat-bar {
+    height: 12px;
+    flex: 1;
+    border-radius: 4px;
+    background: linear-gradient(to right, #0000ff55, #00ff0099, #ffff0099, #ff000099);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 mb-0">Geo Insights</h1>
+    <div class="text-muted small">Interactive geographic analysis of anti-racism organizations in DC</div>
+  </div>
+  <a href="{% url 'geo_insights_export' %}" class="btn btn-outline-secondary btn-sm">
+    Export as HTML
+  </a>
+</div>
+
+{# View toggle #}
+<div class="mb-3 d-flex flex-wrap gap-2">
+  <button class="btn btn-outline-secondary view-btn active" data-view="density">Density</button>
+  <button class="btn btn-outline-secondary view-btn" data-view="ward">By Ward</button>
+  <button class="btn btn-outline-secondary view-btn" data-view="type">By Org Type</button>
+  <button class="btn btn-outline-secondary view-btn" data-view="focus">By Anti-Racism Focus</button>
+  <button class="btn btn-outline-secondary view-btn" data-view="engagement">By Engagement Type</button>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-9">
+    <div class="card shadow-sm">
+      <div class="card-body p-2">
+        <div id="geo-map"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3">
+    <div id="geo-legend">
+      <h6>Legend</h6>
+      <div id="legend-content"></div>
+    </div>
+  </div>
+</div>
+
+{{ org_data_json|json_script:"org-data" }}
+{{ ward_geojson_json|json_script:"ward-geojson" }}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+(function () {
+  const orgs = JSON.parse(document.getElementById("org-data").textContent);
+  const wardGeoJSON = JSON.parse(document.getElementById("ward-geojson").textContent);
+
+  // ── Map setup ────────────────────────────────────────────────
+  const map = L.map("geo-map").setView([38.9072, -77.0369], 12);
+
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  }).addTo(map);
+
+  // ── Color palette ────────────────────────────────────────────
+  const PALETTE = [
+    "#0F7F63","#E63946","#F4A261","#457B9D","#A8DADC",
+    "#6A4C93","#F77F00","#2DC653","#C9184A","#4361EE",
+    "#7209B7","#3A86FF","#FB5607","#8338EC","#06D6A0"
+  ];
+
+  function colorFor(map, key) {
+    if (!map[key]) {
+      const idx = Object.keys(map).length % PALETTE.length;
+      map[key] = PALETTE[idx];
+    }
+    return map[key];
+  }
+
+  // ── Popup builder ────────────────────────────────────────────
+  function buildPopup(o) {
+    const web = o.website
+      ? `<a href="${o.website}" target="_blank" rel="noopener noreferrer">Visit website</a>`
+      : "—";
+    return `
+      <div style="min-width:220px;font-size:0.85rem;">
+        <div style="font-weight:700;margin-bottom:4px;">${o.organization_name || "—"}</div>
+        <div><strong>Type:</strong> ${o.organization_type || "—"}</div>
+        <div><strong>Address:</strong> ${o.address || "—"}</div>
+        <div><strong>Anti-Racism Focus:</strong> ${o.anti_racism_focus || "—"}</div>
+        <div><strong>Website:</strong> ${web}</div>
+      </div>`;
+  }
+
+  // ── Layer state ───────────────────────────────────────────────
+  let activeLayer = null;
+
+  function clearLayer() {
+    if (activeLayer) {
+      map.removeLayer(activeLayer);
+      activeLayer = null;
+    }
+  }
+
+  // ── Legend ────────────────────────────────────────────────────
+  const legendContent = document.getElementById("legend-content");
+
+  function setLegend(html) {
+    legendContent.innerHTML = html;
+  }
+
+  // ── View: Density heatmap ────────────────────────────────────
+  function showDensity() {
+    clearLayer();
+    const points = orgs
+      .filter(o => o.latitude && o.longitude)
+      .map(o => [o.latitude, o.longitude, 1]);
+
+    activeLayer = L.heatLayer(points, {
+      radius: 30,
+      blur: 20,
+      maxZoom: 15,
+      gradient: { 0.2: "#0000ff", 0.5: "#00ff00", 0.7: "#ffff00", 1.0: "#ff0000" }
+    }).addTo(map);
+
+    setLegend(`
+      <div class="text-muted mb-2">Geographic concentration of all organizations.</div>
+      <div class="heat-legend">
+        <span style="font-size:0.75rem;">Low</span>
+        <div class="heat-bar"></div>
+        <span style="font-size:0.75rem;">High</span>
+      </div>`);
+  }
+
+  // ── View: Ward choropleth ────────────────────────────────────
+  function showWard() {
+    clearLayer();
+
+    const counts = {};
+    orgs.forEach(o => {
+      if (o.ward) counts[o.ward] = (counts[o.ward] || 0) + 1;
+    });
+    const max = Math.max(...Object.values(counts), 1);
+
+    function wardColor(count) {
+      const t = count / max;
+      if (t > 0.8) return "#0a5c47";
+      if (t > 0.6) return "#0F7F63";
+      if (t > 0.4) return "#52b69a";
+      if (t > 0.2) return "#99d9c8";
+      return "#d1ede7";
+    }
+
+    activeLayer = L.geoJSON(wardGeoJSON, {
+      style: feature => {
+        const name = feature.properties.NAME;
+        const count = counts[name] || 0;
+        return {
+          fillColor: wardColor(count),
+          weight: 1.5,
+          color: "#fff",
+          fillOpacity: 0.75
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        const name = feature.properties.NAME;
+        const count = counts[name] || 0;
+        layer.bindPopup(`<strong>${name}</strong><br>${count} organization${count !== 1 ? "s" : ""}`);
+        layer.on("mouseover", function () { this.openPopup(); });
+        layer.on("mouseout", function () { this.closePopup(); });
+      }
+    }).addTo(map);
+
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const rows = sorted.map(([ward, n]) =>
+      `<div class="legend-item">
+        <div class="legend-swatch rect" style="background:${wardColor(n)};"></div>
+        <span>${ward}: <strong>${n}</strong></span>
+      </div>`).join("");
+
+    setLegend(`<div class="text-muted mb-2">Organizations per ward.</div>${rows}`);
+  }
+
+  // ── Generic: colored markers by category field ────────────────
+  function showByField(field, label) {
+    clearLayer();
+    const colorMap = {};
+    activeLayer = L.layerGroup();
+
+    orgs.filter(o => o.latitude && o.longitude).forEach(o => {
+      const val = o[field] || "Unknown";
+      const color = colorFor(colorMap, val);
+      L.circleMarker([o.latitude, o.longitude], {
+        radius: 7,
+        fillColor: color,
+        color: "#fff",
+        weight: 1.2,
+        fillOpacity: 0.85
+      }).bindPopup(buildPopup(o)).addTo(activeLayer);
+    });
+
+    activeLayer.addTo(map);
+
+    const rows = Object.entries(colorMap).map(([val, color]) =>
+      `<div class="legend-item">
+        <div class="legend-swatch" style="background:${color};"></div>
+        <span>${val}</span>
+      </div>`).join("");
+
+    setLegend(`<div class="text-muted mb-2">Organizations by ${label}.</div>${rows}`);
+  }
+
+  // ── Toggle buttons ────────────────────────────────────────────
+  const views = {
+    density:    () => showDensity(),
+    ward:       () => showWard(),
+    type:       () => showByField("organization_type", "organization type"),
+    focus:      () => showByField("anti_racism_focus", "anti-racism focus"),
+    engagement: () => showByField("primary_anti_racist_engagement_type", "engagement type"),
+  };
+
+  document.querySelectorAll(".view-btn").forEach(btn => {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
+      this.classList.add("active");
+      views[this.dataset.view]();
+    });
+  });
+
+  // ── Initial view ──────────────────────────────────────────────
+  showDensity();
+
+})();
+</script>
+{% endblock %}
