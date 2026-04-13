@@ -208,7 +208,10 @@
         const name = f.properties.NAME;
         const n = counts[name] || 0;
 
-        l.on("click", function () {
+        l.bindTooltip(`<strong>${name}</strong>: ${n} org${n !== 1 ? "s" : ""}`, { sticky: true });
+
+        l.on("click", function (e) {
+          L.DomEvent.stopPropagation(e); // prevent map click from firing and deselecting
           // Reset previously selected ward
           if (selectedLayer && selectedLayer !== l) {
             activeLayer.resetStyle(selectedLayer);
@@ -220,15 +223,12 @@
             return;
           }
           // Highlight clicked ward along its boundary
-          l.setStyle({
-            ...selectedStyle,
-            fillColor: wardColor(n)
-          });
+          l.setStyle({ ...selectedStyle, fillColor: wardColor(n) });
           l.bringToFront();
           selectedLayer = l;
         });
 
-        // Hover: subtle brightness boost
+        // Hover: subtle brightness boost (skip if already selected)
         l.on("mouseover", function () {
           if (selectedLayer !== l) {
             l.setStyle({ weight: 2.5, color: "#0F7F63", fillOpacity: 0.85 });
