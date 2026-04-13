@@ -105,10 +105,8 @@ def _load_ward_geojson():
 @login_required
 def geo_insights(request):
     org_data = _build_org_geo_data()
-    ward_geojson = _load_ward_geojson()
     context = {
         "org_data_json": json.dumps(org_data),
-        "ward_geojson_json": json.dumps(ward_geojson),
     }
     return render(request, "orgs/geo_insights.html", context)
 
