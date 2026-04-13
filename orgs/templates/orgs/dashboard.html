@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard — Anti-racism-DC{% endblock %}
+
+{% block extra_head %}
+<style>
+  .stat-card {
+    border: 0;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  }
+  .stat-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+  }
+  .stat-value {
+    font-size: 2.4rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .stat-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-top: 4px;
+  }
+  .stat-sub {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+  .chart-card {
+    border: 0;
+    border-radius: 1rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+  .chart-card .card-header {
+    background: transparent;
+    border-bottom: 1px solid #f1f5f9;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 16px 20px 12px;
+    color: #1e293b;
+  }
+  .chart-card .card-body {
+    padding: 16px 20px;
+  }
+  .quick-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 0.75rem;
+    border: 1.5px solid #e2e8f0;
+    text-decoration: none;
+    color: #1e293b;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.15s ease;
+    background: #fff;
+  }
+  .quick-link:hover {
+    border-color: #0F7F63;
+    color: #0F7F63;
+    background: #f0faf7;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15,127,99,0.1);
+  }
+  .quick-link-icon {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+  .section-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Page header ───────────────────────────────────────────── #}
+<div class="mb-4">
+  <h1 class="h4 mb-0">Dashboard</h1>
+  <div class="text-muted small">Overview of anti-racism organizations in Washington, DC</div>
+</div>
+
+{# ── Stat cards ────────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-md-3">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex flex-column gap-2 p-4">
+        <div class="stat-icon" style="background:#e6f6f4;">🏢</div>
+        <div>
+          <div class="stat-value" style="color:#0F7F63;">{{ total_orgs }}</div>
+          <div class="stat-label">Total Organizations</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex flex-column gap-2 p-4">
+        <div class="stat-icon" style="background:#eff6ff;">📍</div>
+        <div>
+          <div class="stat-value" style="color:#2563eb;">{{ mapped_orgs }}</div>
+          <div class="stat-label">On the Map</div>
+          <div class="stat-sub">with GPS coordinates</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex flex-column gap-2 p-4">
+        <div class="stat-icon" style="background:#fef9ec;">🗺️</div>
+        <div>
+          <div class="stat-value" style="color:#d97706;">{{ wards_covered }}</div>
+          <div class="stat-label">Wards Covered</div>
+          <div class="stat-sub">out of 8 DC wards</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex flex-column gap-2 p-4">
+        <div class="stat-icon" style="background:#fdf4ff;">🏷️</div>
+        <div>
+          <div class="stat-value" style="color:#9333ea;">{{ org_types_count }}</div>
+          <div class="stat-label">Organization Types</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Charts row 1 ──────────────────────────────────────────── #}
+<div class="row g-3 mb-3">
+
+  <div class="col-lg-7">
+    <div class="card chart-card h-100">
+      <div class="card-header">Organizations by Ward</div>
+      <div class="card-body">
+        <canvas id="wardChart" style="max-height:280px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card chart-card h-100">
+      <div class="card-header">By Organization Type</div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <canvas id="typeChart" style="max-height:280px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Charts row 2 ──────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+
+  <div class="col-lg-5">
+    <div class="card chart-card h-100">
+      <div class="card-header">By Engagement Type</div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <canvas id="engagementChart" style="max-height:260px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card chart-card h-100">
+      <div class="card-header">By Anti-Racism Focus</div>
+      <div class="card-body">
+        <canvas id="focusChart" style="max-height:260px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Quick links ───────────────────────────────────────────── #}
+<div class="section-label">Quick Actions</div>
+<div class="row g-3">
+  <div class="col-sm-6 col-md-3">
+    <a href="{% url 'organizations_list' %}" class="quick-link">
+      <div class="quick-link-icon" style="background:#e6f6f4; color:#0F7F63;">📋</div>
+      <div>
+        <div>All Organizations</div>
+        <div class="text-muted" style="font-size:0.78rem;">Browse and filter</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <a href="{% url 'organizations_map' %}" class="quick-link">
+      <div class="quick-link-icon" style="background:#eff6ff; color:#2563eb;">🗺️</div>
+      <div>
+        <div>Interactive Map</div>
+        <div class="text-muted" style="font-size:0.78rem;">View all locations</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <a href="{% url 'geo_insights' %}" class="quick-link">
+      <div class="quick-link-icon" style="background:#fef9ec; color:#d97706;">📊</div>
+      <div>
+        <div>Geo Insights</div>
+        <div class="text-muted" style="font-size:0.78rem;">Heatmaps & analysis</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <a href="{% url 'organization_create' %}" class="quick-link">
+      <div class="quick-link-icon" style="background:#fdf4ff; color:#9333ea;">➕</div>
+      <div>
+        <div>Add Organization</div>
+        <div class="text-muted" style="font-size:0.78rem;">Create a new record</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  // ── Data from Django ───────────────────────────────────────
+  const byWard       = {{ by_ward_json|safe }};
+  const byType       = {{ by_type_json|safe }};
+  const byEngagement = {{ by_engagement_json|safe }};
+  const byFocus      = {{ by_focus_json|safe }};
+
+  // ── Palette ────────────────────────────────────────────────
+  const GREEN_SCALE = ["#0a5c47","#0F7F63","#2a9d80","#52b69a","#76c8b0","#99d9c8","#bde8dc","#d8f3ec"];
+  const PALETTE = [
+    "#0F7F63","#E63946","#F4A261","#457B9D","#A8DADC",
+    "#6A4C93","#F77F00","#2DC653","#C9184A","#4361EE",
+    "#7209B7","#3A86FF","#FB5607","#8338EC","#06D6A0"
+  ];
+
+  Chart.defaults.font.family = "system-ui, -apple-system, sans-serif";
+  Chart.defaults.plugins.legend.labels.boxWidth = 13;
+  Chart.defaults.plugins.legend.labels.padding = 14;
+
+  // ── Orgs by Ward (horizontal bar) ─────────────────────────
+  if (byWard.length) {
+    new Chart(document.getElementById("wardChart"), {
+      type: "bar",
+      data: {
+        labels: byWard.map(d => d.ward),
+        datasets: [{
+          label: "Organizations",
+          data: byWard.map(d => d.count),
+          backgroundColor: byWard.map((_, i) => GREEN_SCALE[i % GREEN_SCALE.length]),
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.parsed.x} organization${ctx.parsed.x !== 1 ? "s" : ""}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { precision: 0, font: { size: 11 } },
+            grid: { color: "#f1f5f9" },
+          },
+          y: { ticks: { font: { size: 12 } }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // ── By Type (doughnut) ────────────────────────────────────
+  if (byType.length) {
+    new Chart(document.getElementById("typeChart"), {
+      type: "doughnut",
+      data: {
+        labels: byType.map(d => d.organization_type || "Unknown"),
+        datasets: [{
+          data: byType.map(d => d.count),
+          backgroundColor: PALETTE.slice(0, byType.length),
+          borderWidth: 2,
+          borderColor: "#fff",
+          hoverOffset: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        cutout: "62%",
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { font: { size: 11 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${ctx.parsed} org${ctx.parsed !== 1 ? "s" : ""}`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ── By Engagement Type (doughnut) ────────────────────────
+  if (byEngagement.length) {
+    new Chart(document.getElementById("engagementChart"), {
+      type: "doughnut",
+      data: {
+        labels: byEngagement.map(d => d.primary_anti_racist_engagement_type || "Unknown"),
+        datasets: [{
+          data: byEngagement.map(d => d.count),
+          backgroundColor: ["#0F7F63","#E63946","#F4A261","#457B9D","#A8DADC","#6A4C93","#F77F00","#2DC653"],
+          borderWidth: 2,
+          borderColor: "#fff",
+          hoverOffset: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        cutout: "60%",
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { font: { size: 11 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${ctx.parsed}`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ── By Focus (horizontal bar, top 10) ─────────────────────
+  if (byFocus.length) {
+    const top = byFocus.slice(0, 10);
+    new Chart(document.getElementById("focusChart"), {
+      type: "bar",
+      data: {
+        labels: top.map(d => {
+          const s = d.anti_racism_focus || "Unknown";
+          return s.length > 38 ? s.slice(0, 36) + "…" : s;
+        }),
+        datasets: [{
+          label: "Organizations",
+          data: top.map(d => d.count),
+          backgroundColor: top.map((_, i) => PALETTE[i % PALETTE.length]),
+          borderRadius: 5,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.parsed.x} organization${ctx.parsed.x !== 1 ? "s" : ""}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { precision: 0, font: { size: 11 } },
+            grid: { color: "#f1f5f9" },
+          },
+          y: { ticks: { font: { size: 11 } }, grid: { display: false } }
+        }
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

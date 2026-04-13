@@ -147,9 +147,13 @@
         <div class="text-muted small">Click column headers to sort. Use filters to refine the list.</div>
       </div>
 
-      <div class="d-flex gap-2 align-items-center">
+      <div class="d-flex gap-2 align-items-center flex-wrap">
         <span class="count-pill" id="orgCount">Showing 0 of 0</span>
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'organizations_export_csv' %}">Export CSV</a>
         <a class="btn btn-outline-primary btn-sm" href="{% url 'organizations_map' %}">View Map</a>
+        {% if request.user.is_staff or request.user.is_superuser %}
+          <a class="btn btn-primary btn-sm" href="{% url 'organization_create' %}">+ Add Organization</a>
+        {% endif %}
       </div>
     </div>
 

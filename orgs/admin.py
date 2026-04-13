@@ -1,5 +1,6 @@
 import csv
 import io
+import time
 
 from django.contrib import admin, messages
 from django.contrib.admin.models import CHANGE, LogEntry as DjangoLogEntry
@@ -10,6 +11,42 @@ from simple_history.admin import SimpleHistoryAdmin
 
 from .forms import OrganizationCSVUploadForm
 from .models import ActivityLog, Organization
+from .views import geocode_address
+
+
+def geocode_missing_coordinates(modeladmin, request, queryset):
+    """Admin action: geocode any selected orgs that are missing lat/lng."""
+    missing = queryset.filter(latitude=None) | queryset.filter(longitude=None)
+    filled = 0
+    failed = 0
+    for org in missing.distinct():
+        if not org.address:
+            failed += 1
+            continue
+        lat, lng = geocode_address(org.address)
+        if lat and lng:
+            org.latitude  = lat
+            org.longitude = lng
+            org.save(update_fields=["latitude", "longitude"])
+            filled += 1
+        else:
+            failed += 1
+        time.sleep(1.1)  # Nominatim rate limit: 1 req/sec
+
+    if filled:
+        modeladmin.message_user(
+            request,
+            f"Geocoded {filled} organization(s) successfully.",
+            level=messages.SUCCESS,
+        )
+    if failed:
+        modeladmin.message_user(
+            request,
+            f"{failed} organization(s) could not be geocoded (missing address or no result).",
+            level=messages.WARNING,
+        )
+
+geocode_missing_coordinates.short_description = "Geocode missing coordinates (Nominatim)"
 
 
 @admin.register(ActivityLog)
@@ -42,10 +79,11 @@ class ActivityLogAdmin(admin.ModelAdmin):
 
 @admin.register(Organization)
 class OrganizationAdmin(SimpleHistoryAdmin):
-    list_display = ("organization_id", "organization_name", "organization_type", "ward", "zip_code")
+    list_display = ("organization_id", "organization_name", "organization_type", "ward", "zip_code", "latitude", "longitude")
     search_fields = ("organization_id", "organization_name", "organization_type", "ward", "zip_code")
     list_filter = ("organization_type", "ward")
     ordering = ("organization_name",)
+    actions = [geocode_missing_coordinates]
 
     change_list_template = "admin/orgs/organization/change_list.html"
 

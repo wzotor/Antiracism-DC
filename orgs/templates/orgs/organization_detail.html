@@ -16,20 +16,27 @@
 </div>
 
 {# Header #}
-<div class="mb-4">
-  <h1 class="h3 mb-2">{{ org.organization_name }}</h1>
-  <div class="d-flex flex-wrap gap-2">
-    {% if org.organization_type %}
-      <span class="badge rounded-pill px-3 py-2" style="background-color:#d1ede7; color:#0a5c47; border:1px solid #a3dbd0;">
-        {{ org.organization_type }}
-      </span>
-    {% endif %}
-    {% if org.ward %}
-      <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle px-3 py-2">
-        {{ org.ward }}
-      </span>
-    {% endif %}
+<div class="d-flex justify-content-between align-items-start mb-4 gap-3">
+  <div>
+    <h1 class="h3 mb-2">{{ org.organization_name }}</h1>
+    <div class="d-flex flex-wrap gap-2">
+      {% if org.organization_type %}
+        <span class="badge rounded-pill px-3 py-2" style="background-color:#d1ede7; color:#0a5c47; border:1px solid #a3dbd0;">
+          {{ org.organization_type }}
+        </span>
+      {% endif %}
+      {% if org.ward %}
+        <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle px-3 py-2">
+          {{ org.ward }}
+        </span>
+      {% endif %}
+    </div>
   </div>
+  {% if request.user.is_staff or request.user.is_superuser %}
+    <a href="{% url 'organization_update' org.pk %}" class="btn btn-outline-secondary btn-sm flex-shrink-0">
+      Edit
+    </a>
+  {% endif %}
 </div>
 
 {# Top row: Location + Contact #}
