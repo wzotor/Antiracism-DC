@@ -187,6 +187,16 @@
             <option value="Ward 8">Ward 8</option>
           </select>
         </div>
+
+        <div class="filter-control">
+          <div class="filter-label">Filter by Engagement Type</div>
+          <select id="engagementFilter" class="form-select form-select-sm">
+            <option value="">All Engagement Types</option>
+            {% for et in engagement_types %}
+              <option value="{{ et }}">{{ et }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
 
       <div class="d-flex gap-2">
@@ -208,6 +218,7 @@
               <th>Contact Person</th>
               <th>Position</th>
               <th>Website</th>
+              <th>Engagement Type</th>{# hidden — used for filtering only #}
             </tr>
           </thead>
 
@@ -243,6 +254,7 @@
                     </a>
                   {% endif %}
                 </td>
+                <td>{{ org.primary_anti_racist_engagement_type|default:"" }}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -296,7 +308,8 @@
         }
       },
       columnDefs: [
-        { targets: [1, 3], render: stripHtmlForSort }
+        { targets: [1, 3], render: stripHtmlForSort },
+        { targets: [7], visible: false, searchable: true },
       ],
       language: {
         search: "Search:",
@@ -307,10 +320,11 @@
       }
     });
 
-    const $type = $("#typeFilter");
-    const $ward = $("#wardFilter");
-    const $clear = $("#clearFilters");
-    const $count = $("#orgCount");
+    const $type       = $("#typeFilter");
+    const $ward       = $("#wardFilter");
+    const $engagement = $("#engagementFilter");
+    const $clear      = $("#clearFilters");
+    const $count      = $("#orgCount");
 
     function updateCount() {
       const info = table.page.info();
@@ -319,27 +333,21 @@
 
     // Dropdown filters (non-regex, whitespace safe)
     function applyColumnFilter(colIndex, value) {
-      if (!value) {
-        table.column(colIndex).search("", false, true);
-      } else {
-        table.column(colIndex).search(value, false, true);
-      }
+      table.column(colIndex).search(value ? value : "", false, true);
       table.draw();
     }
 
-    $type.on("change", function () {
-      applyColumnFilter(1, $type.val());
-    });
-
-    $ward.on("change", function () {
-      applyColumnFilter(3, $ward.val());
-    });
+    $type.on("change",       function () { applyColumnFilter(1, $type.val()); });
+    $ward.on("change",       function () { applyColumnFilter(3, $ward.val()); });
+    $engagement.on("change", function () { applyColumnFilter(7, $engagement.val()); });
 
     $clear.on("click", function () {
       $type.val("");
       $ward.val("");
+      $engagement.val("");
       table.column(1).search("", false, true);
       table.column(3).search("", false, true);
+      table.column(7).search("", false, true);
       table.search("").draw();
     });
 

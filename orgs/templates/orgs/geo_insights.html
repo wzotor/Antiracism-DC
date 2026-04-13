@@ -94,11 +94,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <script>
 (function () {
-  const ORG_DATA_URL  = "{% url 'geo_insights_data' %}";
-  const WARD_DATA_URL = "{% static 'geo/dc_wards.geojson' %}";
+  const ORG_DATA_URL      = "{% url 'geo_insights_data' %}";
+  const WARD_DATA_URL     = "{% static 'geo/dc_wards.geojson' %}";
+  const DC_BOUNDARY_URL   = "{% static 'geo/dc_boundary.geojson' %}";
 
-  const errorBanner  = document.getElementById("error-banner");
-  const dataStatus   = document.getElementById("data-status");
+  const errorBanner   = document.getElementById("error-banner");
+  const dataStatus    = document.getElementById("data-status");
   const legendContent = document.getElementById("legend-content");
 
   function showError(msg) {
@@ -107,24 +108,70 @@
   function setLegend(html) { legendContent.innerHTML = html; }
   function setStatus(msg)  { dataStatus.textContent = msg; }
 
-  // ── Map setup ─────────────────────────────────────────────────
+  // ── Map setup ─────────────────────────────────────────────
   const map = L.map("geo-map").setView([38.9072, -77.0369], 12);
   L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
   }).addTo(map);
 
-  // ── State ─────────────────────────────────────────────────────
+  // ── State ─────────────────────────────────────────────────
   let orgs = [];
   let wardGeoJSON = null;
   let activeLayer = null;
   let currentView = "density";
 
+  // Persistent context layers (always on map except ward choropleth hides wardBoundaryLayer)
+  let wardBoundaryLayer = null;
+  let dcBoundaryLayer   = null;
+
   function clearLayer() {
     if (activeLayer) { map.removeLayer(activeLayer); activeLayer = null; }
   }
 
-  // ── Colour palette ────────────────────────────────────────────
+  // ── Persistent boundary layers ────────────────────────────
+  function buildWardBoundaryLayer(geojson) {
+    return L.geoJSON(geojson, {
+      style: {
+        fillOpacity: 0,
+        weight: 1,
+        color: "#9db8b0",
+        dashArray: "3 4",
+        interactive: false,
+      }
+    });
+  }
+
+  function buildDCBoundaryLayer(geojson) {
+    return L.geoJSON(geojson, {
+      style: {
+        fillOpacity: 0,
+        weight: 3,
+        color: "#1a1a2e",
+        opacity: 0.75,
+        interactive: false,
+      }
+    });
+  }
+
+  function showContextLayers(showWardBoundary) {
+    // DC boundary is always visible
+    if (dcBoundaryLayer) {
+      if (!map.hasLayer(dcBoundaryLayer)) dcBoundaryLayer.addTo(map);
+      dcBoundaryLayer.bringToFront();
+    }
+    // Ward boundary lines: shown on all views except "By Ward" (choropleth owns that)
+    if (wardBoundaryLayer) {
+      if (showWardBoundary) {
+        if (!map.hasLayer(wardBoundaryLayer)) wardBoundaryLayer.addTo(map);
+        wardBoundaryLayer.bringToFront();
+      } else {
+        if (map.hasLayer(wardBoundaryLayer)) map.removeLayer(wardBoundaryLayer);
+      }
+    }
+  }
+
+  // ── Colour palette ────────────────────────────────────────
   const PALETTE = [
     "#0F7F63","#E63946","#F4A261","#457B9D","#A8DADC",
     "#6A4C93","#F77F00","#2DC653","#C9184A","#4361EE",
@@ -135,7 +182,7 @@
     return cmap[key];
   }
 
-  // ── Popup ─────────────────────────────────────────────────────
+  // ── Popup ─────────────────────────────────────────────────
   function buildPopup(o) {
     const web = o.website
       ? `<a href="${o.website}" target="_blank" rel="noopener noreferrer">Visit website</a>`
@@ -149,9 +196,10 @@
     </div>`;
   }
 
-  // ── Views ─────────────────────────────────────────────────────
+  // ── Views ─────────────────────────────────────────────────
   function showDensity() {
     clearLayer();
+    showContextLayers(true);
     if (typeof L.heatLayer !== "function") {
       setLegend('<div class="text-danger small">Heatmap plugin failed to load. Try refreshing.</div>');
       return;
@@ -162,6 +210,8 @@
       radius: 28, blur: 18, maxZoom: 16,
       gradient: { 0.2: "#0000ff", 0.5: "#00ff00", 0.75: "#ffff00", 1.0: "#ff0000" }
     }).addTo(map);
+    // Keep boundary lines on top of heat layer
+    showContextLayers(true);
     setLegend(`
       <div class="text-muted mb-2" style="font-size:0.78rem;">Geographic concentration of all organizations.</div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
@@ -173,6 +223,9 @@
 
   function showWard() {
     clearLayer();
+    // Hide subtle ward boundaries — the choropleth owns this view
+    showContextLayers(false);
+
     if (!wardGeoJSON) { setLegend('<div class="text-danger small">Ward boundaries not loaded.</div>'); return; }
 
     const counts = {};
@@ -211,24 +264,20 @@
         l.bindTooltip(`<strong>${name}</strong>: ${n} org${n !== 1 ? "s" : ""}`, { sticky: true });
 
         l.on("click", function (e) {
-          L.DomEvent.stopPropagation(e); // prevent map click from firing and deselecting
-          // Reset previously selected ward
+          L.DomEvent.stopPropagation(e);
           if (selectedLayer && selectedLayer !== l) {
             activeLayer.resetStyle(selectedLayer);
           }
-          // If clicking the same ward again, deselect it
           if (selectedLayer === l) {
             activeLayer.resetStyle(l);
             selectedLayer = null;
             return;
           }
-          // Highlight clicked ward along its boundary
           l.setStyle({ ...selectedStyle, fillColor: wardColor(n) });
           l.bringToFront();
           selectedLayer = l;
         });
 
-        // Hover: subtle brightness boost (skip if already selected)
         l.on("mouseover", function () {
           if (selectedLayer !== l) {
             l.setStyle({ weight: 2.5, color: "#0F7F63", fillOpacity: 0.85 });
@@ -251,6 +300,12 @@
       }
     });
 
+    // DC boundary still visible on top of choropleth
+    if (dcBoundaryLayer) {
+      if (!map.hasLayer(dcBoundaryLayer)) dcBoundaryLayer.addTo(map);
+      dcBoundaryLayer.bringToFront();
+    }
+
     const rows = Object.entries(counts).sort((a, b) => b[1] - a[1])
       .map(([w, n]) => `<div class="legend-item"><div class="legend-swatch rect" style="background:${wardColor(n)};"></div><span>${w}: <strong>${n}</strong></span></div>`).join("");
     setLegend(`<div class="text-muted mb-2" style="font-size:0.78rem;">Click a ward to highlight it.</div>${rows || "<span class='text-muted small'>No ward data.</span>"}`);
@@ -258,6 +313,7 @@
 
   function showByField(field, label) {
     clearLayer();
+    showContextLayers(true);
     if (!orgs.length) { setLegend('<div class="text-muted small">No coordinate data available.</div>'); return; }
     const colorMap = {};
     activeLayer = L.layerGroup();
@@ -269,12 +325,14 @@
       }).bindPopup(buildPopup(o)).addTo(activeLayer);
     });
     activeLayer.addTo(map);
+    // Keep boundary lines on top of markers
+    showContextLayers(true);
     const rows = Object.entries(colorMap)
       .map(([v, c]) => `<div class="legend-item"><div class="legend-swatch" style="background:${c};"></div><span>${v}</span></div>`).join("");
     setLegend(`<div class="text-muted mb-2" style="font-size:0.78rem;">By ${label}.</div>${rows}`);
   }
 
-  // ── Button wiring ─────────────────────────────────────────────
+  // ── Button wiring ─────────────────────────────────────────
   const views = {
     density:    showDensity,
     ward:       showWard,
@@ -302,13 +360,19 @@
     });
   });
 
-  // ── Load data then boot ───────────────────────────────────────
+  // ── Load all data then boot ───────────────────────────────
   Promise.all([
     fetch(ORG_DATA_URL).then(r => { if (!r.ok) throw new Error("Org data: HTTP " + r.status); return r.json(); }),
     fetch(WARD_DATA_URL).then(r => { if (!r.ok) throw new Error("Ward data: HTTP " + r.status); return r.json(); }),
-  ]).then(([orgData, wardData]) => {
-    orgs = orgData;
+    fetch(DC_BOUNDARY_URL).then(r => { if (!r.ok) throw new Error("DC boundary: HTTP " + r.status); return r.json(); }),
+  ]).then(([orgData, wardData, dcData]) => {
+    orgs        = orgData;
     wardGeoJSON = wardData;
+
+    // Build persistent layers (not added to map yet — switchView handles that)
+    wardBoundaryLayer = buildWardBoundaryLayer(wardData);
+    dcBoundaryLayer   = buildDCBoundaryLayer(dcData);
+
     setStatus(orgs.length + " organization" + (orgs.length !== 1 ? "s" : "") + " with coordinates loaded.");
     switchView(currentView);
   }).catch(e => {

@@ -150,8 +150,18 @@ def organizations_list(request):
     if focus:
         qs = qs.filter(anti_racism_focus__icontains=focus)
 
+    engagement_types = (
+        Organization.objects
+        .exclude(primary_anti_racist_engagement_type=None)
+        .exclude(primary_anti_racist_engagement_type="")
+        .values_list("primary_anti_racist_engagement_type", flat=True)
+        .distinct()
+        .order_by("primary_anti_racist_engagement_type")
+    )
+
     context = {
         "organizations": qs,
+        "engagement_types": engagement_types,
         "filters": {
             "organization_type": org_type,
             "ward": ward,
