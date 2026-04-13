@@ -1,16 +1,21 @@
 {% extends "admin/index.html" %}
 
 {% block content %}
+  <div class="dashboard-module" style="margin-bottom: 16px;">
+    <div style="padding: 12px; border: 1px solid #ddd; border-radius: 6px;">
+      <h2 style="margin-top: 0;">Quick links</h2>
 
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
-    
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <a class="button" href="/dashboard/">National Dashboard</a>
-      <a class="button" href="/national-map/">National Centers Map</a>
-      <a class="button" href="{% url 'participant_upload' %}">CSV Upload</a>
-        </div>
+      <p style="margin: 0 0 10px 0;">
+        <a href="/" class="button">Organizations</a>
+        <a href="/admin/orgs/organization/" class="button">Manage Organizations</a>
+        <a href="/admin/orgs/activitylog/" class="button">Activity Logs</a>
+      </p>
+
+      <p style="margin: 0;">
+        Uploads, edits, deletions, and creations are visible in <strong>Activity Logs</strong>.
+      </p>
+    </div>
   </div>
 
   {{ block.super }}
-
 {% endblock %}

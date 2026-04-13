@@ -1,0 +1,17 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+
+  <div style="max-width: 800px;">
+    <p><strong>Required columns:</strong> external_id, organization_name, organization_type</p>
+    <p>All other columns may be empty. Rows missing required values will be skipped.</p>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="default">Upload</button>
+      <a href=".." class="button">Cancel</a>
+    </form>
+  </div>
+{% endblock %}

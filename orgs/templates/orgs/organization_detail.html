@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>{{ org.organization_name }}</h2>
+
+<p><strong>Organization Type:</strong> {{ org.organization_type }}</p>
+<p><strong>Ward:</strong> {{ org.ward }}</p>
+<p><strong>Zip Code:</strong> {{ org.zip_code }}</p>
+
+<p>
+  <strong>Website:</strong>
+  {% if org.website %}
+    <a href="{{ org.website }}" target="_blank" rel="noopener noreferrer">
+      {{ org.website }}
+    </a>
+  {% else %}
+    N/A
+  {% endif %}
+</p>
+
+<p>
+  <strong>Address:</strong>
+  <a href="https://www.google.com/maps/search/?api=1&query={{ org.address|urlencode }}" target="_blank" rel="noopener noreferrer">
+    {{ org.address }}
+  </a>
+</p>
+
+<hr>
+
+<h3>Primary Contact</h3>
+<p><strong>Name:</strong> {{ org.primary_contact_person|default:"N/A" }}</p>
+<p><strong>Role:</strong> {{ org.contact_person_role|default:"N/A" }}</p>
+<p><strong>Email:</strong> {{ org.contact_person_email|default:"N/A" }}</p>
+<p><strong>Mobile:</strong> {{ org.mobile_contact|default:"N/A" }}</p>
+
+<hr>
+
+<h3>Anti-Racism Focus</h3>
+<p>{{ org.anti_racism_focus }}</p>
+
+<h3>Primary Engagement Type</h3>
+<p>{{ org.primary_anti_racist_engagement_type }}</p>
+
+<h3>Core Organizational Activities</h3>
+<p>{{ org.core_organizational_activities }}</p>
+
+<h3>Description of Anti-Racist Activities</h3>
+<p>{{ org.description_of_anti_racist_activities }}</p>
+
+<p>
+  <a href="{% url 'organizations_list' %}">Back to list</a>
+</p>
+
+{% endblock %}

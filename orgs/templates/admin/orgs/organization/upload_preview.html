@@ -1,0 +1,100 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+
+  <div style="max-width: 1100px;">
+    <p>
+      <strong>File:</strong> {{ filename }}<br>
+      <strong>Total rows:</strong> {{ summary.total_rows }} |
+      <strong>Valid:</strong> {{ summary.valid_rows }} |
+      <strong>Invalid:</strong> {{ summary.invalid_rows }}
+    </p>
+
+    {% if invalid_rows %}
+      <h2>Invalid rows (fix these)</h2>
+      <p>Each invalid row shows the reasons it cannot be imported.</p>
+
+      <div style="overflow-x: auto;">
+        <table class="adminlist" style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th>Row</th>
+              <th>external_id</th>
+              <th>organization_name</th>
+              <th>organization_type</th>
+              <th>Reasons</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in invalid_rows %}
+              <tr>
+                <td>{{ r.row_number }}</td>
+                <td>{{ r.external_id }}</td>
+                <td>{{ r.organization_name }}</td>
+                <td>{{ r.organization_type }}</td>
+                <td>
+                  <ul style="margin: 0; padding-left: 18px;">
+                    {% for reason in r.reasons %}
+                      <li>{{ reason }}</li>
+                    {% endfor %}
+                  </ul>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+
+    <h2>Preview (first {{ preview_rows|length }} valid rows)</h2>
+
+    <div style="overflow-x: auto;">
+      <table class="adminlist" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th>Row</th>
+            <th>external_id</th>
+            <th>organization_name</th>
+            <th>organization_type</th>
+            <th>ward</th>
+            <th>zip_code</th>
+            <th>latitude</th>
+            <th>longitude</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in preview_rows %}
+            <tr>
+              <td>{{ r.row_number }}</td>
+              <td>{{ r.external_id }}</td>
+              <td>{{ r.organization_name }}</td>
+              <td>{{ r.organization_type }}</td>
+              <td>{{ r.ward }}</td>
+              <td>{{ r.zip_code }}</td>
+              <td>{{ r.latitude }}</td>
+              <td>{{ r.longitude }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <form method="post" style="margin-top: 16px;">
+      {% csrf_token %}
+      <input type="hidden" name="confirm_import" value="1">
+
+      <button type="submit" class="default" {% if summary.valid_rows == 0 %}disabled{% endif %}>
+        Confirm import
+      </button>
+
+      <a href=".." class="button">Cancel</a>
+
+      {% if summary.valid_rows == 0 %}
+        <p style="margin-top: 10px;">
+          No valid rows to import. Fix the CSV and upload again.
+        </p>
+      {% endif %}
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/USER/Documents/Antiracism-DC -type f \\\\\\( -name \"*.py\" -o -name \"*.html\" -o -name \"*.md\" -o -name \"*.txt\" \\\\\\) ! -path \"*/.venv/*\" -exec grep -l \"Compassion\\\\|Ghana\\\\|compassion\" {} \\\\;)"
+    ]
+  }
+}
