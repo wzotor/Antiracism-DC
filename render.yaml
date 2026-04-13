@@ -9,7 +9,7 @@ services:
     name: antiracism-dc
     runtime: python
     plan: free
-    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py createsuperuser --noinput || true"
     startCommand: "gunicorn config.wsgi:application"
     envVars:
       - key: DJANGO_SECRET_KEY
@@ -24,3 +24,9 @@ services:
         fromDatabase:
           name: antiracism-dc-db
           property: connectionString
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
