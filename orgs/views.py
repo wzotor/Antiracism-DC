@@ -4,7 +4,7 @@ from datetime import date
 
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 
@@ -104,11 +104,12 @@ def _load_ward_geojson():
 
 @login_required
 def geo_insights(request):
-    org_data = _build_org_geo_data()
-    context = {
-        "org_data_json": json.dumps(org_data),
-    }
-    return render(request, "orgs/geo_insights.html", context)
+    return render(request, "orgs/geo_insights.html")
+
+
+@login_required
+def geo_insights_data(request):
+    return JsonResponse(_build_org_geo_data(), safe=False)
 
 
 @login_required

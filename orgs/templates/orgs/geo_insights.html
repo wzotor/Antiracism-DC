@@ -12,11 +12,7 @@
     border-radius: 0.5rem;
     width: 100%;
   }
-  .view-btn.active {
-    background-color: #0F7F63;
-    border-color: #0F7F63;
-    color: #fff;
-  }
+  .view-btn.active { background-color: #0F7F63; border-color: #0F7F63; color: #fff; }
   .view-btn { font-size: 0.85rem; }
   #geo-legend {
     background: #fff;
@@ -43,18 +39,14 @@
     font-size: 0.78rem;
   }
   .legend-swatch {
-    width: 13px;
-    height: 13px;
+    width: 13px; height: 13px;
     border-radius: 50%;
-    flex-shrink: 0;
-    margin-top: 2px;
+    flex-shrink: 0; margin-top: 2px;
     border: 1px solid rgba(0,0,0,0.15);
   }
   .legend-swatch.rect { border-radius: 3px; }
   .heat-bar {
-    height: 12px;
-    flex: 1;
-    border-radius: 4px;
+    height: 12px; flex: 1; border-radius: 4px;
     background: linear-gradient(to right, #0000ff88, #00ff0099, #ffff0099, #ff000099);
   }
 </style>
@@ -86,59 +78,50 @@
         <div id="geo-map"></div>
       </div>
     </div>
-    <div class="text-muted small mt-1" id="data-status"></div>
+    <div class="text-muted small mt-1" id="data-status">Loading data…</div>
   </div>
   <div class="col-lg-3">
     <div id="geo-legend">
       <h6>Legend</h6>
-      <div id="legend-content"><span class="text-muted">Loading…</span></div>
+      <div id="legend-content"><span class="text-muted small">Loading…</span></div>
     </div>
   </div>
 </div>
-
-{{ org_data_json|json_script:"org-data" }}
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://leaflet.github.io/Leaflet.heat/dist/leaflet-heat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <script>
 (function () {
+  const ORG_DATA_URL  = "{% url 'geo_insights_data' %}";
+  const WARD_DATA_URL = "{% static 'geo/dc_wards.geojson' %}";
+
+  const errorBanner  = document.getElementById("error-banner");
+  const dataStatus   = document.getElementById("data-status");
+  const legendContent = document.getElementById("legend-content");
 
   function showError(msg) {
-    document.getElementById("error-banner").innerHTML =
-      `<div class="alert alert-danger mb-3"><strong>Map error:</strong> ${msg}</div>`;
+    errorBanner.innerHTML = `<div class="alert alert-danger mb-3"><strong>Map error:</strong> ${msg}</div>`;
   }
+  function setLegend(html) { legendContent.innerHTML = html; }
+  function setStatus(msg)  { dataStatus.textContent = msg; }
 
-  function setLegend(html) {
-    document.getElementById("legend-content").innerHTML = html;
-  }
+  // ── Map setup ─────────────────────────────────────────────────
+  const map = L.map("geo-map").setView([38.9072, -77.0369], 12);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  }).addTo(map);
 
-  // ── Parse org data ────────────────────────────────────────────
+  // ── State ─────────────────────────────────────────────────────
   let orgs = [];
-  try {
-    const el = document.getElementById("org-data");
-    if (!el) throw new Error("org-data element not found in DOM");
-    orgs = JSON.parse(el.textContent);
-  } catch (e) {
-    showError("Failed to load organization data: " + e.message);
-    return;
-  }
+  let wardGeoJSON = null;
+  let activeLayer = null;
+  let currentView = "density";
 
-  document.getElementById("data-status").textContent =
-    orgs.length + " organization" + (orgs.length !== 1 ? "s" : "") + " with coordinates loaded.";
-
-  // ── Map ───────────────────────────────────────────────────────
-  let map;
-  try {
-    map = L.map("geo-map").setView([38.9072, -77.0369], 12);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    }).addTo(map);
-  } catch (e) {
-    showError("Failed to initialise map: " + e.message);
-    return;
+  function clearLayer() {
+    if (activeLayer) { map.removeLayer(activeLayer); activeLayer = null; }
   }
 
   // ── Colour palette ────────────────────────────────────────────
@@ -161,138 +144,115 @@
       <div style="font-weight:700;margin-bottom:4px;">${o.organization_name || "—"}</div>
       <div><strong>Type:</strong> ${o.organization_type || "—"}</div>
       <div><strong>Address:</strong> ${o.address || "—"}</div>
-      <div><strong>Anti-Racism Focus:</strong> ${o.anti_racism_focus || "—"}</div>
+      <div><strong>Focus:</strong> ${o.anti_racism_focus || "—"}</div>
       <div><strong>Website:</strong> ${web}</div>
     </div>`;
   }
 
-  // ── Layer helpers ─────────────────────────────────────────────
-  let activeLayer = null;
-  function clearLayer() {
-    if (activeLayer) { map.removeLayer(activeLayer); activeLayer = null; }
-  }
-
-  // ── Ward GeoJSON (fetched once, cached) ───────────────────────
-  let wardGeoJSON = null;
-  const wardUrl = "{% static 'geo/dc_wards.geojson' %}";
-
-  async function getWardGeoJSON() {
-    if (wardGeoJSON) return wardGeoJSON;
-    const resp = await fetch(wardUrl);
-    if (!resp.ok) throw new Error("HTTP " + resp.status + " fetching ward boundaries");
-    wardGeoJSON = await resp.json();
-    return wardGeoJSON;
-  }
-
-  // ── View: Density ─────────────────────────────────────────────
+  // ── Views ─────────────────────────────────────────────────────
   function showDensity() {
     clearLayer();
     if (typeof L.heatLayer !== "function") {
-      setLegend('<div class="text-danger small">Heatmap plugin unavailable. Try refreshing.</div>');
+      setLegend('<div class="text-danger small">Heatmap plugin failed to load. Try refreshing.</div>');
       return;
     }
     const points = orgs.map(o => [o.latitude, o.longitude, 1]);
-    if (points.length === 0) {
-      setLegend('<div class="text-muted small">No data with coordinates.</div>');
-      return;
-    }
+    if (!points.length) { setLegend('<div class="text-muted small">No coordinate data available.</div>'); return; }
     activeLayer = L.heatLayer(points, {
-      radius: 30, blur: 20, maxZoom: 15,
-      gradient: { 0.2: "#0000ff", 0.5: "#00ff00", 0.7: "#ffff00", 1.0: "#ff0000" }
+      radius: 28, blur: 18, maxZoom: 16,
+      gradient: { 0.2: "#0000ff", 0.5: "#00ff00", 0.75: "#ffff00", 1.0: "#ff0000" }
     }).addTo(map);
     setLegend(`
       <div class="text-muted mb-2" style="font-size:0.78rem;">Geographic concentration of all organizations.</div>
-      <div style="display:flex;align-items:center;gap:6px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
         <span style="font-size:0.72rem;">Low</span>
         <div class="heat-bar"></div>
         <span style="font-size:0.72rem;">High</span>
       </div>`);
   }
 
-  // ── View: Ward choropleth ─────────────────────────────────────
-  async function showWard() {
+  function showWard() {
     clearLayer();
-    setLegend('<span class="text-muted small">Loading ward boundaries…</span>');
-    let geo;
-    try { geo = await getWardGeoJSON(); }
-    catch (e) { setLegend(`<div class="text-danger small">Could not load ward boundaries: ${e.message}</div>`); return; }
-
+    if (!wardGeoJSON) { setLegend('<div class="text-danger small">Ward boundaries not loaded.</div>'); return; }
     const counts = {};
     orgs.forEach(o => { if (o.ward) counts[o.ward] = (counts[o.ward] || 0) + 1; });
     const max = Math.max(...Object.values(counts), 1);
-
     function wardColor(n) {
       const t = n / max;
-      if (t > 0.8) return "#0a5c47";
-      if (t > 0.6) return "#0F7F63";
-      if (t > 0.4) return "#52b69a";
-      if (t > 0.2) return "#99d9c8";
-      return "#d1ede7";
+      return t > 0.8 ? "#0a5c47" : t > 0.6 ? "#0F7F63" : t > 0.4 ? "#52b69a" : t > 0.2 ? "#99d9c8" : "#d1ede7";
     }
-
-    activeLayer = L.geoJSON(geo, {
-      style: f => ({
-        fillColor: wardColor(counts[f.properties.NAME] || 0),
-        weight: 1.5, color: "#fff", fillOpacity: 0.75
-      }),
+    activeLayer = L.geoJSON(wardGeoJSON, {
+      style: f => ({ fillColor: wardColor(counts[f.properties.NAME] || 0), weight: 1.5, color: "#fff", fillOpacity: 0.75 }),
       onEachFeature: (f, l) => {
         const name = f.properties.NAME, n = counts[name] || 0;
         l.bindTooltip(`<strong>${name}</strong>: ${n} org${n !== 1 ? "s" : ""}`, { sticky: true });
       }
     }).addTo(map);
-
     const rows = Object.entries(counts).sort((a, b) => b[1] - a[1])
-      .map(([w, n]) => `<div class="legend-item">
-        <div class="legend-swatch rect" style="background:${wardColor(n)};"></div>
-        <span>${w}: <strong>${n}</strong></span></div>`).join("");
+      .map(([w, n]) => `<div class="legend-item"><div class="legend-swatch rect" style="background:${wardColor(n)};"></div><span>${w}: <strong>${n}</strong></span></div>`).join("");
     setLegend(`<div class="text-muted mb-2" style="font-size:0.78rem;">Organizations per ward.</div>${rows || "<span class='text-muted small'>No ward data.</span>"}`);
   }
 
-  // ── View: by field ────────────────────────────────────────────
   function showByField(field, label) {
     clearLayer();
-    if (orgs.length === 0) {
-      setLegend('<div class="text-muted small">No data with coordinates.</div>');
-      return;
-    }
+    if (!orgs.length) { setLegend('<div class="text-muted small">No coordinate data available.</div>'); return; }
     const colorMap = {};
     activeLayer = L.layerGroup();
     orgs.forEach(o => {
       const val = (o[field] || "Unknown").trim() || "Unknown";
       L.circleMarker([o.latitude, o.longitude], {
-        radius: 7,
-        fillColor: colorFor(colorMap, val),
+        radius: 7, fillColor: colorFor(colorMap, val),
         color: "#fff", weight: 1.2, fillOpacity: 0.85
       }).bindPopup(buildPopup(o)).addTo(activeLayer);
     });
     activeLayer.addTo(map);
-
     const rows = Object.entries(colorMap)
-      .map(([v, c]) => `<div class="legend-item">
-        <div class="legend-swatch" style="background:${c};"></div>
-        <span>${v}</span></div>`).join("");
+      .map(([v, c]) => `<div class="legend-item"><div class="legend-swatch" style="background:${c};"></div><span>${v}</span></div>`).join("");
     setLegend(`<div class="text-muted mb-2" style="font-size:0.78rem;">By ${label}.</div>${rows}`);
   }
 
   // ── Button wiring ─────────────────────────────────────────────
   const views = {
-    density:    () => showDensity(),
-    ward:       () => showWard(),
+    density:    showDensity,
+    ward:       showWard,
     type:       () => showByField("organization_type", "organization type"),
     focus:      () => showByField("anti_racism_focus", "anti-racism focus"),
     engagement: () => showByField("primary_anti_racist_engagement_type", "engagement type"),
   };
 
+  function switchView(name) {
+    currentView = name;
+    try {
+      views[name]();
+    } catch (e) {
+      setLegend(`<div class="text-danger small">Error: ${e.message}</div>`);
+      showError(e.message);
+      console.error("View error:", e);
+    }
+  }
+
   document.querySelectorAll(".view-btn").forEach(btn => {
     btn.addEventListener("click", function () {
       document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
       this.classList.add("active");
-      views[this.dataset.view]();
+      switchView(this.dataset.view);
     });
   });
 
-  // ── Boot ──────────────────────────────────────────────────────
-  showDensity();
+  // ── Load data then boot ───────────────────────────────────────
+  Promise.all([
+    fetch(ORG_DATA_URL).then(r => { if (!r.ok) throw new Error("Org data: HTTP " + r.status); return r.json(); }),
+    fetch(WARD_DATA_URL).then(r => { if (!r.ok) throw new Error("Ward data: HTTP " + r.status); return r.json(); }),
+  ]).then(([orgData, wardData]) => {
+    orgs = orgData;
+    wardGeoJSON = wardData;
+    setStatus(orgs.length + " organization" + (orgs.length !== 1 ? "s" : "") + " with coordinates loaded.");
+    switchView(currentView);
+  }).catch(e => {
+    showError("Failed to load map data: " + e.message);
+    setStatus("Data load failed.");
+    console.error(e);
+  });
 
 })();
 </script>
