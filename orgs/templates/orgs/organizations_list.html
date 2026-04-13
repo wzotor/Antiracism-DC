@@ -81,12 +81,14 @@
     border: 0;
   }
 
-  /* Cooler badge styling */
+  /* Badge styling */
   .badge-soft-type {
     background: #e6f6f4;
     color: #0f766e;
     border: 1px solid #bfeae6;
     font-weight: 600;
+    font-size: 0.7rem;
+    padding: 3px 6px;
   }
 
   .badge-soft-ward {
@@ -94,64 +96,23 @@
     color: #334155;
     border: 1px solid #e2e8f0;
     font-weight: 600;
+    font-size: 0.7rem;
+    padding: 3px 6px;
   }
 
-  /* Make rows feel less quiet */
-  .table-hover tbody tr:hover {
-    background-color: #f8fafc;
-  }
-
-  /* Fit table to screen (reduce width pressure) */
+  /* Compact, auto-sizing table */
   #orgTable {
-    font-size: 0.92rem;
-    table-layout: fixed;
+    font-size: 0.85rem;
+    table-layout: auto;
     width: 100%;
   }
 
   #orgTable th,
   #orgTable td {
-    padding: 0.5rem 0.6rem;
+    padding: 4px 8px;
     vertical-align: middle;
     white-space: normal;
     word-break: break-word;
-    overflow-wrap: anywhere;
-  }
-
-  /* Column width guidance */
-  #orgTable th:nth-child(1),
-  #orgTable td:nth-child(1) { width: 20%; }
-
-  #orgTable th:nth-child(2),
-  #orgTable td:nth-child(2) { width: 13%; }
-
-  #orgTable th:nth-child(3),
-  #orgTable td:nth-child(3) { width: 18%; }
-
-  #orgTable th:nth-child(4),
-  #orgTable td:nth-child(4) { width: 8%; }
-
-  #orgTable th:nth-child(5),
-  #orgTable td:nth-child(5) { width: 13%; }
-
-  #orgTable th:nth-child(6),
-  #orgTable td:nth-child(6) { width: 13%; }
-
-  #orgTable th:nth-child(7),
-  #orgTable td:nth-child(7) { width: 15%; }
-
-  /* Prevent badges from stretching columns too wide */
-  .badge-soft-type,
-  .badge-soft-ward {
-    display: inline-block;
-    max-width: 100%;
-    white-space: normal;
-    line-height: 1.2;
-    padding: 0.35rem 0.5rem;
-  }
-
-  /* Slightly smaller secondary ID line */
-  #orgTable .text-muted.small {
-    font-size: 0.78rem;
   }
 
   .dt-container .dataTables_filter input,
@@ -317,7 +278,7 @@
       pageLength: 25,
       lengthMenu: [10, 25, 50, 100],
       order: [[0, "asc"]],
-      autoWidth: false,
+      autoWidth: true,
 
       // UI lock (stable feel)
       stateSave: true,
