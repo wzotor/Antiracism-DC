@@ -119,22 +119,25 @@
 
   /* Column width guidance */
   #orgTable th:nth-child(1),
-  #orgTable td:nth-child(1) { width: 22%; }
+  #orgTable td:nth-child(1) { width: 20%; }
 
   #orgTable th:nth-child(2),
-  #orgTable td:nth-child(2) { width: 14%; }
+  #orgTable td:nth-child(2) { width: 13%; }
 
   #orgTable th:nth-child(3),
-  #orgTable td:nth-child(3) { width: 22%; }
+  #orgTable td:nth-child(3) { width: 18%; }
 
   #orgTable th:nth-child(4),
-  #orgTable td:nth-child(4) { width: 10%; }
+  #orgTable td:nth-child(4) { width: 8%; }
 
   #orgTable th:nth-child(5),
-  #orgTable td:nth-child(5) { width: 16%; }
+  #orgTable td:nth-child(5) { width: 13%; }
 
   #orgTable th:nth-child(6),
-  #orgTable td:nth-child(6) { width: 16%; }
+  #orgTable td:nth-child(6) { width: 13%; }
+
+  #orgTable th:nth-child(7),
+  #orgTable td:nth-child(7) { width: 15%; }
 
   /* Prevent badges from stretching columns too wide */
   .badge-soft-type,
@@ -239,6 +242,7 @@
               <th>Ward</th>
               <th>Contact Person</th>
               <th>Position</th>
+              <th>Website</th>
             </tr>
           </thead>
 
@@ -267,6 +271,13 @@
 
                 <td>{{ org.primary_contact_person|default:"" }}</td>
                 <td>{{ org.contact_person_role|default:"" }}</td>
+                <td>
+                  {% if org.website %}
+                    <a href="{{ org.website }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                      Visit site
+                    </a>
+                  {% endif %}
+                </td>
               </tr>
             {% endfor %}
           </tbody>
