@@ -1,0 +1,26 @@
+databases:
+  - name: antiracism-dc-db
+    databaseName: antiracism_dc
+    user: antiracism_dc_user
+    plan: free
+
+services:
+  - type: web
+    name: antiracism-dc
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+    startCommand: "gunicorn config.wsgi:application"
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECURE_SSL_REDIRECT
+        value: "True"
+      - key: DJANGO_HSTS_SECONDS
+        value: "300"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: antiracism-dc-db
+          property: connectionString
