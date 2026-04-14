@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% load static %}
 {% block extra_head %}
 <link
   rel="stylesheet"
@@ -100,6 +101,21 @@
     } else {
       map.setView([38.9072, -77.0369], 12);
     }
+
+    // DC boundary outline
+    fetch("{% static 'geo/dc_boundary.geojson' %}")
+      .then(r => r.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: {
+            fillOpacity: 0,
+            weight: 3,
+            color: "#1a1a2e",
+            opacity: 0.75,
+            interactive: false,
+          }
+        }).addTo(map).bringToFront();
+      });
   });
 </script>
 {% endblock %}
