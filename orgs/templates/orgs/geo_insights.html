@@ -357,8 +357,7 @@
     activeLayer.addTo(map);
     showContextLayers(true);
     const rows = Object.entries(colorMap)
-      .map(([v, c]) => `<div class="legend-item"><div class="legend-swatch" style="background:${c};"></div><span>${v}</span></div>`).join("")
-      + `<div class="legend-item"><div class="legend-swatch" style="background:#94a3b8;"></div><span>Unclassified</span></div>`;
+      .map(([v, c]) => `<div class="legend-item"><div class="legend-swatch" style="background:${c};"></div><span>${v}</span></div>`).join("");
     setLegend(`<div class="text-muted mb-2" style="font-size:0.78rem;">By strategic classification.</div>${rows}`);
   }
 

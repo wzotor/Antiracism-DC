@@ -4,6 +4,7 @@
 {% block title %}Dashboard — Anti-racism-DC{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
   .stat-card {
     border: 0;
@@ -133,7 +134,7 @@
   <div class="col-6 col-md-4 col-lg-2">
     <div class="card stat-card h-100">
       <div class="card-body d-flex flex-column gap-2 p-3">
-        <div class="stat-icon" style="background:#e6f6f4;">🏢</div>
+        <div class="stat-icon" style="background:#e6f6f4;"><i class="bi bi-building-fill" style="color:#0F7F63;font-size:1.3rem;"></i></div>
         <div>
           <div class="stat-value" style="color:#0F7F63;">{{ total_orgs }}</div>
           <div class="stat-label">Total Orgs</div>
@@ -145,7 +146,7 @@
   <div class="col-6 col-md-4 col-lg-2">
     <div class="card stat-card h-100">
       <div class="card-body d-flex flex-column gap-2 p-3">
-        <div class="stat-icon" style="background:#eff6ff;">📍</div>
+        <div class="stat-icon" style="background:#eff6ff;"><i class="bi bi-geo-alt-fill" style="color:#2563eb;font-size:1.3rem;"></i></div>
         <div>
           <div class="stat-value" style="color:#2563eb;">{{ mapped_orgs }}</div>
           <div class="stat-label">On the Map</div>
@@ -158,7 +159,7 @@
   <div class="col-6 col-md-4 col-lg-2">
     <div class="card stat-card h-100">
       <div class="card-body d-flex flex-column gap-2 p-3">
-        <div class="stat-icon" style="background:#fef9ec;">🗺️</div>
+        <div class="stat-icon" style="background:#fef9ec;"><i class="bi bi-map-fill" style="color:#d97706;font-size:1.3rem;"></i></div>
         <div>
           <div class="stat-value" style="color:#d97706;">{{ wards_covered }}</div>
           <div class="stat-label">Wards Covered</div>
@@ -171,7 +172,7 @@
   <div class="col-6 col-md-4 col-lg-2">
     <div class="card stat-card h-100">
       <div class="card-body d-flex flex-column gap-2 p-3">
-        <div class="stat-icon" style="background:#fdf4ff;">🏷️</div>
+        <div class="stat-icon" style="background:#fdf4ff;"><i class="bi bi-collection-fill" style="color:#9333ea;font-size:1.3rem;"></i></div>
         <div>
           <div class="stat-value" style="color:#9333ea;">{{ org_types_count }}</div>
           <div class="stat-label">Org Types</div>
@@ -183,7 +184,7 @@
   <div class="col-6 col-md-4 col-lg-2">
     <div class="card stat-card h-100">
       <div class="card-body d-flex flex-column gap-2 p-3">
-        <div class="stat-icon" style="background:#fff1f2;">🎯</div>
+        <div class="stat-icon" style="background:#fff1f2;"><i class="bi bi-diagram-3-fill" style="color:#e11d48;font-size:1.3rem;"></i></div>
         <div>
           <div class="stat-value" style="color:#e11d48;">{{ classified_count }}</div>
           <div class="stat-label">Classified</div>
@@ -196,7 +197,7 @@
   <div class="col-6 col-md-4 col-lg-2">
     <div class="card stat-card h-100">
       <div class="card-body d-flex flex-column gap-2 p-3">
-        <div class="stat-icon" style="background:#f0fdf4;">🌱</div>
+        <div class="stat-icon" style="background:#f0fdf4;"><i class="bi bi-pin-map-fill" style="color:#16a34a;font-size:1.3rem;"></i></div>
         <div>
           <div class="stat-value" style="color:#16a34a;">8</div>
           <div class="stat-label">DC Wards</div>
@@ -298,7 +299,7 @@
 <div class="row g-3">
   <div class="col-sm-6 col-md-3">
     <a href="{% url 'organizations_list' %}" class="quick-link">
-      <div class="quick-link-icon" style="background:#e6f6f4; color:#0F7F63;">📋</div>
+      <div class="quick-link-icon" style="background:#e6f6f4; color:#0F7F63;"><i class="bi bi-table"></i></div>
       <div>
         <div>All Organizations</div>
         <div class="text-muted" style="font-size:0.78rem;">Browse and filter</div>
@@ -307,7 +308,7 @@
   </div>
   <div class="col-sm-6 col-md-3">
     <a href="{% url 'organizations_map' %}" class="quick-link">
-      <div class="quick-link-icon" style="background:#eff6ff; color:#2563eb;">🗺️</div>
+      <div class="quick-link-icon" style="background:#eff6ff; color:#2563eb;"><i class="bi bi-map"></i></div>
       <div>
         <div>Interactive Map</div>
         <div class="text-muted" style="font-size:0.78rem;">View all locations</div>
@@ -316,7 +317,7 @@
   </div>
   <div class="col-sm-6 col-md-3">
     <a href="{% url 'geo_insights' %}" class="quick-link">
-      <div class="quick-link-icon" style="background:#fef9ec; color:#d97706;">📊</div>
+      <div class="quick-link-icon" style="background:#fef9ec; color:#d97706;"><i class="bi bi-bar-chart-line-fill"></i></div>
       <div>
         <div>Geo Insights</div>
         <div class="text-muted" style="font-size:0.78rem;">Heatmaps & analysis</div>
@@ -325,7 +326,7 @@
   </div>
   <div class="col-sm-6 col-md-3">
     <a href="{% url 'organization_create' %}" class="quick-link">
-      <div class="quick-link-icon" style="background:#fdf4ff; color:#9333ea;">➕</div>
+      <div class="quick-link-icon" style="background:#fdf4ff; color:#9333ea;"><i class="bi bi-plus-circle-fill"></i></div>
       <div>
         <div>Add Organization</div>
         <div class="text-muted" style="font-size:0.78rem;">Create a new record</div>
