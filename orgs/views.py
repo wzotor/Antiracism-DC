@@ -1,7 +1,6 @@
 import csv
 import json
 import os
-import time
 import urllib.parse
 import urllib.request
 from datetime import date
@@ -13,7 +12,6 @@ from django.db.models import Count
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
-from django.views.decorators.http import require_POST
 
 from .forms import OrganizationForm
 from .models import Organization
@@ -66,6 +64,7 @@ def _build_org_geo_data():
             "website": o.website or "",
             "anti_racism_focus": o.anti_racism_focus or "",
             "primary_anti_racist_engagement_type": o.primary_anti_racist_engagement_type or "",
+            "strategic_classification": o.strategic_classification or "",
             "latitude": o.latitude,
             "longitude": o.longitude,
         })
@@ -119,16 +118,30 @@ def dashboard(request):
         .annotate(count=Count("id"))
         .order_by("-count")
     )
+    by_classification = list(
+        Organization.objects
+        .exclude(strategic_classification=None).exclude(strategic_classification="")
+        .values("strategic_classification")
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+    classified_count = sum(d["count"] for d in by_classification)
+    last_updated = (
+        Organization.objects.order_by("-created_at").values_list("created_at", flat=True).first()
+    )
 
     context = {
-        "total_orgs":      total_orgs,
-        "mapped_orgs":     mapped_orgs,
-        "wards_covered":   wards_covered,
-        "org_types_count": len(by_type),
-        "by_ward_json":       json.dumps(by_ward),
-        "by_type_json":       json.dumps(by_type),
-        "by_engagement_json": json.dumps(by_engagement),
-        "by_focus_json":      json.dumps(by_focus),
+        "total_orgs":           total_orgs,
+        "mapped_orgs":          mapped_orgs,
+        "wards_covered":        wards_covered,
+        "org_types_count":      len(by_type),
+        "classified_count":     classified_count,
+        "by_ward_json":               json.dumps(by_ward),
+        "by_type_json":               json.dumps(by_type),
+        "by_engagement_json":         json.dumps(by_engagement),
+        "by_focus_json":              json.dumps(by_focus),
+        "by_classification_json":     json.dumps(by_classification),
+        "last_updated":               last_updated,
     }
     return render(request, "orgs/dashboard.html", context)
 
@@ -162,6 +175,7 @@ def organizations_list(request):
     context = {
         "organizations": qs,
         "engagement_types": engagement_types,
+        "strategic_classifications": ["Root-Cause", "Bridging", "Immediate-Need"],
         "filters": {
             "organization_type": org_type,
             "ward": ward,
@@ -186,6 +200,7 @@ def organizations_export_csv(request):
         "primary_contact_person", "contact_person_role",
         "contact_person_email", "mobile_contact",
         "anti_racism_focus", "primary_anti_racist_engagement_type",
+        "strategic_classification",
         "core_organizational_activities", "description_of_anti_racist_activities",
         "latitude", "longitude",
     ]
@@ -320,7 +335,10 @@ def geo_insights(request):
 
 @login_required
 def geo_insights_data(request):
-    return JsonResponse(_build_org_geo_data(), safe=False)
+    data = _build_org_geo_data()
+    total = Organization.objects.count()
+    # Attach total as a special key so the map can show a missing-coords notice
+    return JsonResponse({"orgs": data, "total_count": total})
 
 
 @login_required

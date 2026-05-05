@@ -48,10 +48,17 @@
   .chart-card .card-header {
     background: transparent;
     border-bottom: 1px solid #f1f5f9;
+    padding: 16px 20px 10px;
+  }
+  .chart-card .card-header .chart-title {
     font-weight: 600;
     font-size: 0.9rem;
-    padding: 16px 20px 12px;
     color: #1e293b;
+    margin-bottom: 2px;
+  }
+  .chart-card .card-header .chart-desc {
+    font-size: 0.75rem;
+    color: #94a3b8;
   }
   .chart-card .card-body {
     padding: 16px 20px;
@@ -92,35 +99,52 @@
     font-weight: 600;
     margin-bottom: 12px;
   }
+  .classification-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 
 {# ── Page header ───────────────────────────────────────────── #}
-<div class="mb-4">
-  <h1 class="h4 mb-0">Dashboard</h1>
-  <div class="text-muted small">Overview of anti-racism organizations in Washington, DC</div>
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h1 class="h4 mb-0">Dashboard</h1>
+    <div class="text-muted small">Overview of anti-racism organizations in Washington, DC</div>
+  </div>
+  {% if last_updated %}
+    <div class="text-muted small text-end" style="line-height:1.4;">
+      <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">Data last updated</div>
+      <div style="font-weight:600;color:#475569;">{{ last_updated|date:"F j, Y" }}</div>
+    </div>
+  {% endif %}
 </div>
 
 {# ── Stat cards ────────────────────────────────────────────── #}
 <div class="row g-3 mb-4">
 
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-4 col-lg-2">
     <div class="card stat-card h-100">
-      <div class="card-body d-flex flex-column gap-2 p-4">
+      <div class="card-body d-flex flex-column gap-2 p-3">
         <div class="stat-icon" style="background:#e6f6f4;">🏢</div>
         <div>
           <div class="stat-value" style="color:#0F7F63;">{{ total_orgs }}</div>
-          <div class="stat-label">Total Organizations</div>
+          <div class="stat-label">Total Orgs</div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-4 col-lg-2">
     <div class="card stat-card h-100">
-      <div class="card-body d-flex flex-column gap-2 p-4">
+      <div class="card-body d-flex flex-column gap-2 p-3">
         <div class="stat-icon" style="background:#eff6ff;">📍</div>
         <div>
           <div class="stat-value" style="color:#2563eb;">{{ mapped_orgs }}</div>
@@ -131,9 +155,9 @@
     </div>
   </div>
 
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-4 col-lg-2">
     <div class="card stat-card h-100">
-      <div class="card-body d-flex flex-column gap-2 p-4">
+      <div class="card-body d-flex flex-column gap-2 p-3">
         <div class="stat-icon" style="background:#fef9ec;">🗺️</div>
         <div>
           <div class="stat-value" style="color:#d97706;">{{ wards_covered }}</div>
@@ -144,13 +168,39 @@
     </div>
   </div>
 
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-4 col-lg-2">
     <div class="card stat-card h-100">
-      <div class="card-body d-flex flex-column gap-2 p-4">
+      <div class="card-body d-flex flex-column gap-2 p-3">
         <div class="stat-icon" style="background:#fdf4ff;">🏷️</div>
         <div>
           <div class="stat-value" style="color:#9333ea;">{{ org_types_count }}</div>
-          <div class="stat-label">Organization Types</div>
+          <div class="stat-label">Org Types</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex flex-column gap-2 p-3">
+        <div class="stat-icon" style="background:#fff1f2;">🎯</div>
+        <div>
+          <div class="stat-value" style="color:#e11d48;">{{ classified_count }}</div>
+          <div class="stat-label">Classified</div>
+          <div class="stat-sub">by strategy</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex flex-column gap-2 p-3">
+        <div class="stat-icon" style="background:#f0fdf4;">🌱</div>
+        <div>
+          <div class="stat-value" style="color:#16a34a;">8</div>
+          <div class="stat-label">DC Wards</div>
+          <div class="stat-sub">all tracked</div>
         </div>
       </div>
     </div>
@@ -158,23 +208,44 @@
 
 </div>
 
+{# ── Strategic Classification highlight ────────────────────── #}
+{% if by_classification_json != "[]" %}
+<div class="card chart-card mb-4" style="background: linear-gradient(135deg, #f0faf7 0%, #e6f6f4 100%); border: 1.5px solid #bfeae6 !important;">
+  <div class="card-body py-3 px-4">
+    <div class="d-flex flex-wrap align-items-center gap-3">
+      <div>
+        <div style="font-weight:700;font-size:0.85rem;color:#0a5c47;">Strategic Classification</div>
+        <div style="font-size:0.75rem;color:#64748b;">How organizations are categorised by their role in addressing racism</div>
+      </div>
+      <div class="d-flex flex-wrap gap-2 ms-auto" id="classification-pills"></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {# ── Charts row 1 ──────────────────────────────────────────── #}
 <div class="row g-3 mb-3">
 
   <div class="col-lg-7">
     <div class="card chart-card h-100">
-      <div class="card-header">Organizations by Ward</div>
+      <div class="card-header">
+        <div class="chart-title">Organizations by Ward</div>
+        <div class="chart-desc">Shows which DC wards have the highest concentration of anti-racism organizations</div>
+      </div>
       <div class="card-body">
-        <canvas id="wardChart" style="max-height:280px;"></canvas>
+        <canvas id="wardChart" style="max-height:260px;"></canvas>
       </div>
     </div>
   </div>
 
   <div class="col-lg-5">
     <div class="card chart-card h-100">
-      <div class="card-header">By Organization Type</div>
+      <div class="card-header">
+        <div class="chart-title">By Organization Type</div>
+        <div class="chart-desc">Breakdown of the kinds of entities doing anti-racism work</div>
+      </div>
       <div class="card-body d-flex align-items-center justify-content-center">
-        <canvas id="typeChart" style="max-height:280px;"></canvas>
+        <canvas id="typeChart" style="max-height:260px;"></canvas>
       </div>
     </div>
   </div>
@@ -184,20 +255,38 @@
 {# ── Charts row 2 ──────────────────────────────────────────── #}
 <div class="row g-3 mb-4">
 
-  <div class="col-lg-5">
+  <div class="col-lg-4">
     <div class="card chart-card h-100">
-      <div class="card-header">By Engagement Type</div>
+      <div class="card-header">
+        <div class="chart-title">Strategic Classification</div>
+        <div class="chart-desc">Root-Cause orgs address systemic drivers; Bridging orgs connect communities; Immediate-Need orgs deliver direct services</div>
+      </div>
       <div class="card-body d-flex align-items-center justify-content-center">
-        <canvas id="engagementChart" style="max-height:260px;"></canvas>
+        <canvas id="classificationChart" style="max-height:240px;"></canvas>
       </div>
     </div>
   </div>
 
-  <div class="col-lg-7">
+  <div class="col-lg-4">
     <div class="card chart-card h-100">
-      <div class="card-header">By Anti-Racism Focus</div>
+      <div class="card-header">
+        <div class="chart-title">By Engagement Type</div>
+        <div class="chart-desc">Primary method each organization uses to advance anti-racism</div>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <canvas id="engagementChart" style="max-height:240px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <div class="chart-title">By Anti-Racism Focus</div>
+        <div class="chart-desc">Top focus areas — the specific racial justice issues organizations prioritize</div>
+      </div>
       <div class="card-body">
-        <canvas id="focusChart" style="max-height:260px;"></canvas>
+        <canvas id="focusChart" style="max-height:240px;"></canvas>
       </div>
     </div>
   </div>
@@ -251,25 +340,46 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
 (function () {
-  // ── Data from Django ───────────────────────────────────────
-  const byWard       = {{ by_ward_json|safe }};
-  const byType       = {{ by_type_json|safe }};
-  const byEngagement = {{ by_engagement_json|safe }};
-  const byFocus      = {{ by_focus_json|safe }};
+  const byWard           = {{ by_ward_json|safe }};
+  const byType           = {{ by_type_json|safe }};
+  const byEngagement     = {{ by_engagement_json|safe }};
+  const byFocus          = {{ by_focus_json|safe }};
+  const byClassification = {{ by_classification_json|safe }};
 
-  // ── Palette ────────────────────────────────────────────────
   const GREEN_SCALE = ["#0a5c47","#0F7F63","#2a9d80","#52b69a","#76c8b0","#99d9c8","#bde8dc","#d8f3ec"];
   const PALETTE = [
     "#0F7F63","#E63946","#F4A261","#457B9D","#A8DADC",
     "#6A4C93","#F77F00","#2DC653","#C9184A","#4361EE",
     "#7209B7","#3A86FF","#FB5607","#8338EC","#06D6A0"
   ];
+  const CLASS_COLORS = {
+    "Root-Cause":     "#0F7F63",
+    "Bridging":       "#457B9D",
+    "Immediate-Need": "#E63946",
+  };
 
   Chart.defaults.font.family = "system-ui, -apple-system, sans-serif";
   Chart.defaults.plugins.legend.labels.boxWidth = 13;
   Chart.defaults.plugins.legend.labels.padding = 14;
 
-  // ── Orgs by Ward (horizontal bar) ─────────────────────────
+  // ── Classification pills ──────────────────────────────────
+  const pillContainer = document.getElementById("classification-pills");
+  if (pillContainer && byClassification.length) {
+    const total = byClassification.reduce((s, d) => s + d.count, 0);
+    byClassification.forEach(d => {
+      const color = CLASS_COLORS[d.strategic_classification] || "#64748b";
+      const pct = total ? Math.round(d.count / total * 100) : 0;
+      const pill = document.createElement("div");
+      pill.className = "classification-pill";
+      pill.style.background = color + "18";
+      pill.style.border = `1.5px solid ${color}40`;
+      pill.style.color = color;
+      pill.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;"></span>${d.strategic_classification} <strong>${d.count}</strong> <span style="opacity:0.7;">(${pct}%)</span>`;
+      pillContainer.appendChild(pill);
+    });
+  }
+
+  // ── Orgs by Ward ─────────────────────────────────────────
   if (byWard.length) {
     new Chart(document.getElementById("wardChart"), {
       type: "bar",
@@ -288,24 +398,17 @@
         responsive: true,
         plugins: {
           legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: ctx => ` ${ctx.parsed.x} organization${ctx.parsed.x !== 1 ? "s" : ""}`
-            }
-          }
+          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} organization${ctx.parsed.x !== 1 ? "s" : ""}` } }
         },
         scales: {
-          x: {
-            ticks: { precision: 0, font: { size: 11 } },
-            grid: { color: "#f1f5f9" },
-          },
+          x: { ticks: { precision: 0, font: { size: 11 } }, grid: { color: "#f1f5f9" } },
           y: { ticks: { font: { size: 12 } }, grid: { display: false } }
         }
       }
     });
   }
 
-  // ── By Type (doughnut) ────────────────────────────────────
+  // ── By Type (doughnut) ───────────────────────────────────
   if (byType.length) {
     new Chart(document.getElementById("typeChart"), {
       type: "doughnut",
@@ -314,30 +417,42 @@
         datasets: [{
           data: byType.map(d => d.count),
           backgroundColor: PALETTE.slice(0, byType.length),
-          borderWidth: 2,
-          borderColor: "#fff",
-          hoverOffset: 6,
+          borderWidth: 2, borderColor: "#fff", hoverOffset: 6,
         }]
       },
       options: {
-        responsive: true,
-        cutout: "62%",
+        responsive: true, cutout: "62%",
         plugins: {
-          legend: {
-            position: "bottom",
-            labels: { font: { size: 11 } }
-          },
-          tooltip: {
-            callbacks: {
-              label: ctx => ` ${ctx.label}: ${ctx.parsed} org${ctx.parsed !== 1 ? "s" : ""}`
-            }
-          }
+          legend: { position: "bottom", labels: { font: { size: 11 } } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}` } }
         }
       }
     });
   }
 
-  // ── By Engagement Type (doughnut) ────────────────────────
+  // ── Strategic Classification (doughnut) ──────────────────
+  if (byClassification.length) {
+    new Chart(document.getElementById("classificationChart"), {
+      type: "doughnut",
+      data: {
+        labels: byClassification.map(d => d.strategic_classification),
+        datasets: [{
+          data: byClassification.map(d => d.count),
+          backgroundColor: byClassification.map(d => CLASS_COLORS[d.strategic_classification] || "#94a3b8"),
+          borderWidth: 2, borderColor: "#fff", hoverOffset: 8,
+        }]
+      },
+      options: {
+        responsive: true, cutout: "60%",
+        plugins: {
+          legend: { position: "bottom", labels: { font: { size: 11 } } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}` } }
+        }
+      }
+    });
+  }
+
+  // ── By Engagement (doughnut) ─────────────────────────────
   if (byEngagement.length) {
     new Chart(document.getElementById("engagementChart"), {
       type: "doughnut",
@@ -345,46 +460,32 @@
         labels: byEngagement.map(d => d.primary_anti_racist_engagement_type || "Unknown"),
         datasets: [{
           data: byEngagement.map(d => d.count),
-          backgroundColor: ["#0F7F63","#E63946","#F4A261","#457B9D","#A8DADC","#6A4C93","#F77F00","#2DC653"],
-          borderWidth: 2,
-          borderColor: "#fff",
-          hoverOffset: 6,
+          backgroundColor: PALETTE.slice(0, byEngagement.length),
+          borderWidth: 2, borderColor: "#fff", hoverOffset: 6,
         }]
       },
       options: {
-        responsive: true,
-        cutout: "60%",
+        responsive: true, cutout: "60%",
         plugins: {
-          legend: {
-            position: "bottom",
-            labels: { font: { size: 11 } }
-          },
-          tooltip: {
-            callbacks: {
-              label: ctx => ` ${ctx.label}: ${ctx.parsed}`
-            }
-          }
+          legend: { position: "bottom", labels: { font: { size: 11 } } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}` } }
         }
       }
     });
   }
 
-  // ── By Focus (horizontal bar, top 10) ─────────────────────
+  // ── By Focus (horizontal bar, top 8) ─────────────────────
   if (byFocus.length) {
-    const top = byFocus.slice(0, 10);
+    const top = byFocus.slice(0, 8);
     new Chart(document.getElementById("focusChart"), {
       type: "bar",
       data: {
-        labels: top.map(d => {
-          const s = d.anti_racism_focus || "Unknown";
-          return s.length > 38 ? s.slice(0, 36) + "…" : s;
-        }),
+        labels: top.map(d => { const s = d.anti_racism_focus || "Unknown"; return s.length > 30 ? s.slice(0, 28) + "…" : s; }),
         datasets: [{
           label: "Organizations",
           data: top.map(d => d.count),
-          backgroundColor: top.map((_, i) => PALETTE[i % PALETTE.length]),
-          borderRadius: 5,
-          borderSkipped: false,
+          backgroundColor: PALETTE.slice(0, top.length),
+          borderRadius: 5, borderSkipped: false,
         }]
       },
       options: {
@@ -392,18 +493,11 @@
         responsive: true,
         plugins: {
           legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: ctx => ` ${ctx.parsed.x} organization${ctx.parsed.x !== 1 ? "s" : ""}`
-            }
-          }
+          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} organization${ctx.parsed.x !== 1 ? "s" : ""}` } }
         },
         scales: {
-          x: {
-            ticks: { precision: 0, font: { size: 11 } },
-            grid: { color: "#f1f5f9" },
-          },
-          y: { ticks: { font: { size: 11 } }, grid: { display: false } }
+          x: { ticks: { precision: 0, font: { size: 11 } }, grid: { color: "#f1f5f9" } },
+          y: { ticks: { font: { size: 10 } }, grid: { display: false } }
         }
       }
     });

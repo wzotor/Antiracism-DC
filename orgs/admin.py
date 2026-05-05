@@ -311,6 +311,7 @@ class OrganizationAdmin(SimpleHistoryAdmin):
                         "primary_anti_racist_engagement_type": clean(
                             row.get("primary_anti_racist_engagement_type")
                         ),
+                        "strategic_classification": clean(row.get("strategic_classification")),
                         "core_organizational_activities": clean(row.get("core_organizational_activities")),
                         "description_of_anti_racist_activities": clean(
                             row.get("description_of_anti_racist_activities")

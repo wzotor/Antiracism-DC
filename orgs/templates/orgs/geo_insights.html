@@ -69,6 +69,7 @@
   <button class="btn btn-outline-secondary view-btn" data-view="type">By Org Type</button>
   <button class="btn btn-outline-secondary view-btn" data-view="focus">By Anti-Racism Focus</button>
   <button class="btn btn-outline-secondary view-btn" data-view="engagement">By Engagement Type</button>
+  <button class="btn btn-outline-secondary view-btn" data-view="classification">By Strategic Classification</button>
 </div>
 
 <div class="row g-3">
@@ -79,6 +80,7 @@
       </div>
     </div>
     <div class="text-muted small mt-1" id="data-status">Loading data…</div>
+    <div id="missing-coords-notice" class="text-muted small mt-1" style="display:none;"></div>
   </div>
   <div class="col-lg-3">
     <div id="geo-legend">
@@ -97,6 +99,7 @@
   const ORG_DATA_URL      = "{% url 'geo_insights_data' %}";
   const WARD_DATA_URL     = "{% static 'geo/dc_wards.geojson' %}";
   const DC_BOUNDARY_URL   = "{% static 'geo/dc_boundary.geojson' %}";
+  const missingNotice     = document.getElementById("missing-coords-notice");
 
   const errorBanner   = document.getElementById("error-banner");
   const dataStatus    = document.getElementById("data-status");
@@ -177,6 +180,11 @@
     "#6A4C93","#F77F00","#2DC653","#C9184A","#4361EE",
     "#7209B7","#3A86FF","#FB5607","#8338EC","#06D6A0"
   ];
+  const CLASS_COLORS = {
+    "Root-Cause":     "#0F7F63",
+    "Bridging":       "#457B9D",
+    "Immediate-Need": "#E63946",
+  };
   function colorFor(cmap, key) {
     if (!cmap[key]) cmap[key] = PALETTE[Object.keys(cmap).length % PALETTE.length];
     return cmap[key];
@@ -332,13 +340,36 @@
     setLegend(`<div class="text-muted mb-2" style="font-size:0.78rem;">By ${label}.</div>${rows}`);
   }
 
+  function showClassification() {
+    clearLayer();
+    showContextLayers(true);
+    if (!orgs.length) { setLegend('<div class="text-muted small">No coordinate data available.</div>'); return; }
+    const colorMap = { ...CLASS_COLORS };
+    activeLayer = L.layerGroup();
+    orgs.forEach(o => {
+      const val = (o.strategic_classification || "Unclassified").trim() || "Unclassified";
+      const color = colorMap[val] || "#94a3b8";
+      L.circleMarker([o.latitude, o.longitude], {
+        radius: 7, fillColor: color,
+        color: "#fff", weight: 1.2, fillOpacity: 0.88
+      }).bindPopup(buildPopup(o)).addTo(activeLayer);
+    });
+    activeLayer.addTo(map);
+    showContextLayers(true);
+    const rows = Object.entries(colorMap)
+      .map(([v, c]) => `<div class="legend-item"><div class="legend-swatch" style="background:${c};"></div><span>${v}</span></div>`).join("")
+      + `<div class="legend-item"><div class="legend-swatch" style="background:#94a3b8;"></div><span>Unclassified</span></div>`;
+    setLegend(`<div class="text-muted mb-2" style="font-size:0.78rem;">By strategic classification.</div>${rows}`);
+  }
+
   // ── Button wiring ─────────────────────────────────────────
   const views = {
-    density:    showDensity,
-    ward:       showWard,
-    type:       () => showByField("organization_type", "organization type"),
-    focus:      () => showByField("anti_racism_focus", "anti-racism focus"),
-    engagement: () => showByField("primary_anti_racist_engagement_type", "engagement type"),
+    density:        showDensity,
+    ward:           showWard,
+    type:           () => showByField("organization_type", "organization type"),
+    focus:          () => showByField("anti_racism_focus", "anti-racism focus"),
+    engagement:     () => showByField("primary_anti_racist_engagement_type", "engagement type"),
+    classification: showClassification,
   };
 
   function switchView(name) {
@@ -366,7 +397,7 @@
     fetch(WARD_DATA_URL).then(r => { if (!r.ok) throw new Error("Ward data: HTTP " + r.status); return r.json(); }),
     fetch(DC_BOUNDARY_URL).then(r => { if (!r.ok) throw new Error("DC boundary: HTTP " + r.status); return r.json(); }),
   ]).then(([orgData, wardData, dcData]) => {
-    orgs        = orgData;
+    orgs        = orgData.orgs;
     wardGeoJSON = wardData;
 
     // Build persistent layers (not added to map yet — switchView handles that)
@@ -374,6 +405,11 @@
     dcBoundaryLayer   = buildDCBoundaryLayer(dcData);
 
     setStatus(orgs.length + " organization" + (orgs.length !== 1 ? "s" : "") + " with coordinates loaded.");
+    if (missingNotice && orgData.total_count > orgs.length) {
+      const missing = orgData.total_count - orgs.length;
+      missingNotice.textContent = `⚠ ${missing} organization${missing !== 1 ? "s are" : " is"} not shown on this map — coordinates missing.`;
+      missingNotice.style.display = "block";
+    }
     switchView(currentView);
   }).catch(e => {
     showError("Failed to load map data: " + e.message);

@@ -32,6 +32,7 @@ class OrganizationForm(forms.ModelForm):
             "mobile_contact",
             "anti_racism_focus",
             "primary_anti_racist_engagement_type",
+            "strategic_classification",
             "core_organizational_activities",
             "description_of_anti_racist_activities",
         ]
@@ -51,6 +52,15 @@ class OrganizationForm(forms.ModelForm):
             "mobile_contact": forms.TextInput(attrs={"class": "form-control"}),
             "anti_racism_focus": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
             "primary_anti_racist_engagement_type": forms.TextInput(attrs={"class": "form-control"}),
+            "strategic_classification": forms.Select(
+                choices=[
+                    ("", "— Select —"),
+                    ("Root-Cause", "Root-Cause"),
+                    ("Bridging", "Bridging"),
+                    ("Immediate-Need", "Immediate-Need"),
+                ],
+                attrs={"class": "form-select"},
+            ),
             "core_organizational_activities": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "description_of_anti_racist_activities": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }

@@ -30,13 +30,33 @@
           {{ org.ward }}
         </span>
       {% endif %}
+      {% if org.strategic_classification %}
+        {% if org.strategic_classification == "Root-Cause" %}
+          <span class="badge rounded-pill px-3 py-2" style="background-color:#e6f6f4; color:#0a5c47; border:1px solid #0F7F63;">
+            🎯 Root-Cause
+          </span>
+        {% elif org.strategic_classification == "Bridging" %}
+          <span class="badge rounded-pill px-3 py-2" style="background-color:#dbeafe; color:#1e40af; border:1px solid #457B9D;">
+            🌉 Bridging
+          </span>
+        {% elif org.strategic_classification == "Immediate-Need" %}
+          <span class="badge rounded-pill px-3 py-2" style="background-color:#fee2e2; color:#991b1b; border:1px solid #E63946;">
+            🤝 Immediate-Need
+          </span>
+        {% else %}
+          <span class="badge rounded-pill bg-light text-secondary border px-3 py-2">
+            {{ org.strategic_classification }}
+          </span>
+        {% endif %}
+      {% endif %}
     </div>
   </div>
-  {% if request.user.is_staff or request.user.is_superuser %}
-    <a href="{% url 'organization_update' org.pk %}" class="btn btn-outline-secondary btn-sm flex-shrink-0">
-      Edit
-    </a>
-  {% endif %}
+  <div class="d-flex gap-2 flex-shrink-0">
+    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">Print / PDF</button>
+    {% if request.user.is_staff or request.user.is_superuser %}
+      <a href="{% url 'organization_update' org.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+    {% endif %}
+  </div>
 </div>
 
 {# Top row: Location + Contact #}
@@ -131,6 +151,11 @@
 <div class="card shadow-sm mb-4">
   <div class="card-header fw-semibold">Anti-Racism Work</div>
   <div class="card-body">
+
+    {% if org.strategic_classification %}
+    <h6 class="text-muted small text-uppercase mb-1">Strategic Classification</h6>
+    <p class="mb-4">{{ org.strategic_classification }}</p>
+    {% endif %}
 
     {% if org.anti_racism_focus %}
     <h6 class="text-muted small text-uppercase mb-1">Anti-Racism Focus</h6>

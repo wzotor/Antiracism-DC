@@ -23,6 +23,7 @@ class Organization(models.Model):
 
     anti_racism_focus = models.TextField(blank=True, null=True)
     primary_anti_racist_engagement_type = models.CharField(max_length=255, blank=True, null=True)
+    strategic_classification = models.CharField(max_length=100, blank=True, null=True)
 
     core_organizational_activities = models.TextField(blank=True, null=True)
     description_of_anti_racist_activities = models.TextField(blank=True, null=True)
